@@ -29,10 +29,10 @@ A URL está centralizada em **1 lugar** (preferencial):
 Arquivo: `app/build.gradle.kts`
 
 ```kotlin
-buildConfigField("String", "WEB_URL", "\"https://example.com\"")
+buildConfigField("String", "WEB_URL", "\"https://hotspot1.edmilsonti.com.br/\"")
 ```
 
-Troque `https://example.com` pela URL desejada e faça novo build.
+Troque pela URL desejada e faça novo build.
 
 ## Como rodar (debug)
 1. Abra o projeto no Android Studio.
@@ -49,18 +49,69 @@ APK gerado em:
 
 `app/build/outputs/apk/debug/app-debug.apk`
 
-## Como gerar APK release
-Build release:
+## Assinatura final (Google Play)
+O projeto está preparado para assinatura de release via:
+- `keystore.properties` (recomendado para uso local)
+- variáveis de ambiente `RELEASE_*` (recomendado para CI/CD)
+
+Se você executar tarefa release sem configurar assinatura, o Gradle interrompe com erro para evitar artefato inválido.
+
+### 1. Gerar keystore (uma única vez)
+Exemplo:
+
+```powershell
+keytool -genkeypair -v `
+  -keystore C:\keys\edmilson-release.jks `
+  -alias edmilson_upload `
+  -keyalg RSA -keysize 2048 -validity 10000
+```
+
+### 2. Configurar `keystore.properties`
+1. Copie `keystore.properties.example` para `keystore.properties`.
+2. Preencha os valores reais:
+
+```properties
+RELEASE_STORE_FILE=C:/keys/edmilson-release.jks
+RELEASE_STORE_PASSWORD=*****
+RELEASE_KEY_ALIAS=edmilson_upload
+RELEASE_KEY_PASSWORD=*****
+```
+
+`keystore.properties` e arquivos de chave já estão no `.gitignore`.
+
+### 3. Alternativa via variáveis de ambiente (CI/CD)
+```powershell
+$env:RELEASE_STORE_FILE="C:/keys/edmilson-release.jks"
+$env:RELEASE_STORE_PASSWORD="*****"
+$env:RELEASE_KEY_ALIAS="edmilson_upload"
+$env:RELEASE_KEY_PASSWORD="*****"
+```
+
+### 4. Gerar release assinado
+Para Google Play, prefira AAB:
+
+```powershell
+.\gradlew.bat bundleRelease
+```
+
+Saída:
+- `app/build/outputs/bundle/release/app-release.aab`
+
+Se precisar APK assinado:
 
 ```powershell
 .\gradlew.bat assembleRelease
 ```
 
-APK gerado em:
+Saída:
+- `app/build/outputs/apk/release/app-release.apk`
 
-`app/build/outputs/apk/release/app-release-unsigned.apk`
-
-Para assinatura final, configure keystore no Android Studio ou no Gradle conforme seu processo de distribuição.
+### 5. Fluxo pelo Android Studio
+1. `Build > Generate Signed Bundle / APK`
+2. Escolha `Android App Bundle`
+3. Selecione o mesmo `keystore`/alias
+4. Build Variant: `release`
+5. Finalize a geração e valide o artefato
 
 ## Estrutura principal
 ```text
@@ -72,3 +123,7 @@ app/
   src/main/res/drawable-xhdpi/banner_tv.png
   src/main/res/mipmap-anydpi-v26/
 ```
+
+## Licenças
+- Licença do projeto: `LICENSE` (Apache-2.0)
+- Avisos de terceiros: `THIRD_PARTY_NOTICES.md`

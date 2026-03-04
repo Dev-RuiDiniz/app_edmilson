@@ -1,6 +1,44 @@
+import org.gradle.api.GradleException
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+}
+
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+}
+
+fun readSigningValue(key: String): String? {
+    return keystoreProperties.getProperty(key)?.takeIf { it.isNotBlank() }
+        ?: System.getenv(key)?.takeIf { it.isNotBlank() }
+}
+
+val releaseStoreFile = readSigningValue("RELEASE_STORE_FILE")
+val releaseStorePassword = readSigningValue("RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = readSigningValue("RELEASE_KEY_ALIAS")
+val releaseKeyPassword = readSigningValue("RELEASE_KEY_PASSWORD")
+
+val hasReleaseSigning = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword
+).all { !it.isNullOrBlank() }
+
+val runningReleaseTask = gradle.startParameter.taskNames.any { taskName ->
+    taskName.contains("Release", ignoreCase = true) || taskName.contains("bundle", ignoreCase = true)
+}
+
+if (runningReleaseTask && !hasReleaseSigning) {
+    throw GradleException(
+        "Release signing is not configured. " +
+            "Provide keystore.properties or RELEASE_* environment variables."
+    )
 }
 
 android {
@@ -15,12 +53,28 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "WEB_URL", "\"https://example.com\"")
+        buildConfigField("String", "WEB_URL", "\"https://hotspot1.edmilsonti.com.br/\"")
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+                enableV1Signing = true
+                enableV2Signing = true
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

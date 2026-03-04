@@ -45,7 +45,7 @@ A URL base está centralizada em:
 Exemplo atual:
 
 ```kotlin
-buildConfigField("String", "WEB_URL", "\"https://example.com\"")
+buildConfigField("String", "WEB_URL", "\"https://hotspot1.edmilsonti.com.br/\"")
 ```
 
 ## Arquivos principais
@@ -81,6 +81,6 @@ Resultado:
 - Sem suíte de testes instrumentados nesta sprint.
 
 ## Próximos passos sugeridos (Sprint 2)
-- Configurar assinatura release e pipeline de build.
+- Automatizar publicação (CI/CD) com variáveis de assinatura `RELEASE_*`.
 - Adicionar tela de loading e timeout configurável.
 - Implementar testes instrumentados básicos de navegação e estado offline.
