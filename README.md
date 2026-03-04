@@ -1,128 +1,86 @@
 # app_edmilson
 
-Projeto Android Kotlin (Gradle) para **mobile + Android TV** que abre uma URL em **WebView fullscreen**.
+Projeto Android Kotlin (Gradle) para **mobile + Android TV** com foco em **digital signage**:
+- pareamento por QR Code;
+- sessão persistente no dispositivo;
+- consumo de playlist de propaganda por API;
+- exibição fullscreen de imagem, vídeo e web;
+- retomada do ponto ao reabrir o app.
 
-## Requisitos do projeto
+## Requisitos
 - Min SDK: 26 (Android 8)
 - Compile SDK: 36
 - Target SDK: 36
 - 1 Activity principal: `MainActivity`
 - Suporte a launcher mobile e `LEANBACK_LAUNCHER` (TV)
 
-## Funcionalidades MVP implementadas
-- Abre automaticamente a URL configurada ao iniciar.
-- WebView fullscreen com modo imersivo.
-- Mantém a tela ligada (`FLAG_KEEP_SCREEN_ON`).
-- Navegação touch (mobile) e foco básico para D-pad/controle remoto (TV).
-- Tecla Back:
-  - volta no histórico do WebView, quando disponível;
-  - fecha o app quando não há histórico.
-- Links permanecem dentro do próprio WebView.
-- Estado offline/erro:
-  - mostra overlay `Sem conexão`;
-  - botão `Tentar novamente` recarrega a URL.
-- Ícone de launcher + banner para Android TV.
+## Fluxo funcional atual
+1. No primeiro uso, o app gera `deviceId` + `pairingCode` e mostra QR Code.
+2. O cliente escaneia o QR e autentica no sistema.
+3. O app faz polling da API de status até receber token de acesso.
+4. Após pareado, o app busca a playlist de propaganda e inicia a reprodução.
+5. Em reinício do app/dispositivo:
+  - mantém token/sessão;
+  - volta no item em exibição (e posição do vídeo quando aplicável).
+6. O app só fecha com ação intencional (duplo Back).
 
-## Como alterar a URL
-A URL está centralizada em **1 lugar** (preferencial):
-
+## Configurações de integração (BuildConfig)
 Arquivo: `app/build.gradle.kts`
 
 ```kotlin
-buildConfigField("String", "WEB_URL", "\"https://hotspot1.edmilsonti.com.br/\"")
+buildConfigField("String", "API_BASE_URL", "\"https://hotspot1.edmilsonti.com.br/api/\"")
+buildConfigField("String", "PAIRING_URL", "\"https://hotspot1.edmilsonti.com.br/tv-pair\"")
+buildConfigField("int", "API_POLL_SECONDS", "15")
 ```
 
-Troque pela URL desejada e faça novo build.
+## Contrato de API esperado no app
+### 1. Status de pareamento
+`GET {API_BASE_URL}tv/devices/{deviceId}/status?code={pairingCode}`
+
+Resposta esperada:
+```json
+{
+  "paired": true,
+  "accessToken": "jwt-ou-token"
+}
+```
+
+### 2. Playlist
+`GET {API_BASE_URL}tv/devices/{deviceId}/playlist?resolution={largura}x{altura}`
+`Authorization: Bearer {token}`
+
+Resposta esperada:
+```json
+{
+  "refreshAfterSeconds": 15,
+  "items": [
+    { "type": "image", "url": "https://...", "durationSeconds": 10 },
+    { "type": "video", "url": "https://..." },
+    { "type": "web", "url": "https://...", "durationSeconds": 15 }
+  ]
+}
+```
 
 ## Como rodar (debug)
-1. Abra o projeto no Android Studio.
-2. Aguarde sync do Gradle.
-3. Execute em um dispositivo/emulador Android mobile ou Android TV.
-
-Também via terminal (Windows):
-
 ```powershell
 .\gradlew.bat assembleDebug
 ```
 
-APK gerado em:
+APK debug:
+- `app/build/outputs/apk/debug/app-debug.apk`
 
-`app/build/outputs/apk/debug/app-debug.apk`
-
-## Assinatura final (Google Play)
-O projeto está preparado para assinatura de release via:
-- `keystore.properties` (recomendado para uso local)
-- variáveis de ambiente `RELEASE_*` (recomendado para CI/CD)
-
-Se você executar tarefa release sem configurar assinatura, o Gradle interrompe com erro para evitar artefato inválido.
-
-### 1. Gerar keystore (uma única vez)
-Exemplo:
-
+## Instalação no BlueStacks
 ```powershell
-keytool -genkeypair -v `
-  -keystore C:\keys\edmilson-release.jks `
-  -alias edmilson_upload `
-  -keyalg RSA -keysize 2048 -validity 10000
+$apk = (Resolve-Path "app\build\outputs\apk\debug\app-debug.apk").Path
+& "C:\Program Files\BlueStacks_nxt\HD-Player.exe" --instance Pie64 --cmd installApk --filepath "$apk"
+& "C:\Program Files\BlueStacks_nxt\HD-Player.exe" --instance Pie64 --cmd launchApp --package com.example.app_edmilson
 ```
 
-### 2. Configurar `keystore.properties`
-1. Copie `keystore.properties.example` para `keystore.properties`.
-2. Preencha os valores reais:
+## Assinatura release (Google Play)
+O projeto suporta assinatura com `keystore.properties` ou variáveis `RELEASE_*`.
+Sem assinatura configurada, tarefas `Release`/`bundle` falham propositalmente.
 
-```properties
-RELEASE_STORE_FILE=C:/keys/edmilson-release.jks
-RELEASE_STORE_PASSWORD=*****
-RELEASE_KEY_ALIAS=edmilson_upload
-RELEASE_KEY_PASSWORD=*****
-```
-
-`keystore.properties` e arquivos de chave já estão no `.gitignore`.
-
-### 3. Alternativa via variáveis de ambiente (CI/CD)
-```powershell
-$env:RELEASE_STORE_FILE="C:/keys/edmilson-release.jks"
-$env:RELEASE_STORE_PASSWORD="*****"
-$env:RELEASE_KEY_ALIAS="edmilson_upload"
-$env:RELEASE_KEY_PASSWORD="*****"
-```
-
-### 4. Gerar release assinado
-Para Google Play, prefira AAB:
-
-```powershell
-.\gradlew.bat bundleRelease
-```
-
-Saída:
-- `app/build/outputs/bundle/release/app-release.aab`
-
-Se precisar APK assinado:
-
-```powershell
-.\gradlew.bat assembleRelease
-```
-
-Saída:
-- `app/build/outputs/apk/release/app-release.apk`
-
-### 5. Fluxo pelo Android Studio
-1. `Build > Generate Signed Bundle / APK`
-2. Escolha `Android App Bundle`
-3. Selecione o mesmo `keystore`/alias
-4. Build Variant: `release`
-5. Finalize a geração e valide o artefato
-
-## Estrutura principal
-```text
-app/
-  src/main/AndroidManifest.xml
-  src/main/java/com/example/app_edmilson/MainActivity.kt
-  src/main/res/layout/activity_main.xml
-  src/main/res/drawable/
-  src/main/res/drawable-xhdpi/banner_tv.png
-  src/main/res/mipmap-anydpi-v26/
-```
+Consulte: `docs/release-signing.md`
 
 ## Licenças
 - Licença do projeto: `LICENSE` (Apache-2.0)

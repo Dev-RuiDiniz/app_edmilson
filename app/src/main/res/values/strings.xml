@@ -3,4 +3,7 @@
     <string name="app_name">Web Kiosk</string>
     <string name="offline_message">Sem conexão</string>
     <string name="retry">Tentar novamente</string>
+    <string name="pairing_title">Escaneie o QR Code para ativar esta TV</string>
+    <string name="pairing_qr_content_desc">QR Code de pareamento</string>
+    <string name="exit_hint">Pressione voltar novamente para sair</string>
 </resources>

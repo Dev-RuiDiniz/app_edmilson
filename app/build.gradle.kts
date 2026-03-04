@@ -53,7 +53,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "WEB_URL", "\"https://hotspot1.edmilsonti.com.br/\"")
+        buildConfigField("String", "API_BASE_URL", "\"https://hotspot1.edmilsonti.com.br/api/\"")
+        buildConfigField("String", "PAIRING_URL", "\"https://hotspot1.edmilsonti.com.br/tv-pair\"")
+        buildConfigField("int", "API_POLL_SECONDS", "15")
     }
 
     signingConfigs {
@@ -100,4 +102,9 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("com.google.zxing:core:3.5.3")
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
+    implementation("androidx.media3:media3-ui:1.4.1")
 }
