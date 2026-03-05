@@ -75,7 +75,10 @@ android {
             "String",
             "API_TV_CONTENT_PATH_TEMPLATE",
             asBuildConfigString(
-                readStringConfig("API_TV_CONTENT_PATH_TEMPLATE", "api/tv/propagandas?codigo={code}")
+                readStringConfig(
+                    "API_TV_CONTENT_PATH_TEMPLATE",
+                    "api/tv/propagandas?codigo={code}&api_key=TV56beafcbe547ac8d6b4a95685efb2dc39b7b260fb645b55a"
+                )
             )
         )
     }

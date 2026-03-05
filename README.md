@@ -49,16 +49,17 @@ Arquivo: `app/build.gradle.kts`
 
 Variáveis suportadas (Gradle property ou env var):
 - `API_BASE_URL` (ex.: `https://hotspot1.edmilsonti.com.br`)
-- `API_TV_CONTENT_PATH_TEMPLATE` (default: `api/tv/propagandas?codigo={code}`)
+- `API_TV_CONTENT_PATH_TEMPLATE` (default: `api/tv/propagandas?codigo={code}&api_key=TV56beafcbe547ac8d6b4a95685efb2dc39b7b260fb645b55a`)
 
 Exemplos de template aceitos:
 - `api/tv/propagandas?codigo={code}`
 - `api/tv/propagandas?codigo=%s`
+- `api/tv/propagandas?codigo={code}&api_key=TV56beafcbe547ac8d6b4a95685efb2dc39b7b260fb645b55a`
 - `https://hotspot1.edmilsonti.com.br/api/tv/propagandas?codigo={code}`
 
 Regra de montagem da URL:
 - URL da API = Base + endpoint.
-- Ex.: `https://hotspot1.edmilsonti.com.br` + `api/tv/propagandas?codigo=TV2665487D`.
+- Ex.: `https://hotspot1.edmilsonti.com.br` + `api/tv/propagandas?codigo=TV2665487D&api_key=TV56beafcbe547ac8d6b4a95685efb2dc39b7b260fb645b55a`.
 
 ## Build
 ```powershell
@@ -67,6 +68,15 @@ Regra de montagem da URL:
 
 APK debug:
 - `app/build/outputs/apk/debug/app-debug.apk`
+
+## Teste no BlueStacks
+Com BlueStacks aberto:
+
+```powershell
+adb connect 127.0.0.1:5555
+adb -s 127.0.0.1:5555 install -r app\build\outputs\apk\debug\app-debug.apk
+adb -s 127.0.0.1:5555 shell monkey -p com.example.app_edmilson -c android.intent.category.LAUNCHER 1
+```
 
 ## Testes
 - Testes unitários atuais:
