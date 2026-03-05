@@ -69,12 +69,14 @@ android {
         buildConfigField(
             "String",
             "API_BASE_URL",
-            asBuildConfigString(readStringConfig("API_BASE_URL", "https://hotspot1.edmilsonti.com.br/api/"))
+            asBuildConfigString(readStringConfig("API_BASE_URL", "https://hotspot1.edmilsonti.com.br"))
         )
         buildConfigField(
             "String",
             "API_TV_CONTENT_PATH_TEMPLATE",
-            asBuildConfigString(readStringConfig("API_TV_CONTENT_PATH_TEMPLATE", "tv/%s/content"))
+            asBuildConfigString(
+                readStringConfig("API_TV_CONTENT_PATH_TEMPLATE", "api/tv/propagandas?codigo={code}")
+            )
         )
     }
 
@@ -131,6 +133,8 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("io.coil-kt:coil:2.7.0")
+    implementation("androidx.media3:media3-exoplayer:1.5.1")
+    implementation("androidx.media3:media3-ui:1.5.1")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")

@@ -4,7 +4,7 @@ App Android (celular + Android TV) em Kotlin para fluxo:
 
 1. inserir/selecionar **Código TV**
 2. consultar API por código
-3. renderizar conteúdo (URL/HTML/Imagem)
+3. renderizar conteúdo (URL/HTML/Imagem/Vídeo)
 
 ## Requisitos
 - Min SDK: 26
@@ -20,6 +20,7 @@ App Android (celular + Android TV) em Kotlin para fluxo:
    - `type = "url"` -> `WebView.loadUrl`
    - `type = "html"` -> `WebView.loadDataWithBaseURL`
    - `type = "image"` -> `ImageView` com Coil
+   - `type = "video"` (ou URL com extensão de vídeo) -> `PlayerView` + ExoPlayer
    - sem `type` + `url` válida -> assume URL
 
 ## Lógica do sistema
@@ -40,18 +41,24 @@ App Android (celular + Android TV) em Kotlin para fluxo:
 - Renderização:
   - `url` e `html` em `WebView`
   - `image` em `ImageView` (Coil)
+  - `video` em `PlayerView` (ExoPlayer), com autoplay e loop
   - estado de `Loading`, `Success`, `Error`, com ação de recarregar e trocar código
 
 ## API e BuildConfig
 Arquivo: `app/build.gradle.kts`
 
 Variáveis suportadas (Gradle property ou env var):
-- `API_BASE_URL` (ex.: `https://hotspot1.edmilsonti.com.br/api/`)
-- `API_TV_CONTENT_PATH_TEMPLATE` (default: `tv/%s/content`)
+- `API_BASE_URL` (ex.: `https://hotspot1.edmilsonti.com.br`)
+- `API_TV_CONTENT_PATH_TEMPLATE` (default: `api/tv/propagandas?codigo={code}`)
 
 Exemplos de template aceitos:
-- `tv/%s/content`
-- `tv/{code}/content`
+- `api/tv/propagandas?codigo={code}`
+- `api/tv/propagandas?codigo=%s`
+- `https://hotspot1.edmilsonti.com.br/api/tv/propagandas?codigo={code}`
+
+Regra de montagem da URL:
+- URL da API = Base + endpoint.
+- Ex.: `https://hotspot1.edmilsonti.com.br` + `api/tv/propagandas?codigo=TV2665487D`.
 
 ## Build
 ```powershell

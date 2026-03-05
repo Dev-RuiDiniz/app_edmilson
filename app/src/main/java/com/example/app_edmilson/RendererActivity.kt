@@ -14,6 +14,11 @@ import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -34,6 +39,7 @@ class RendererActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var imageView: ImageView
+    private lateinit var playerView: PlayerView
     private lateinit var loadingOverlay: View
     private lateinit var errorOverlay: View
     private lateinit var errorMessage: TextView
@@ -49,6 +55,13 @@ class RendererActivity : AppCompatActivity() {
 
     private var tvCode: String = ""
     private var isWebContentVisible: Boolean = false
+    private var exoPlayer: ExoPlayer? = null
+
+    private val exoPlayerListener = object : Player.Listener {
+        override fun onPlayerError(error: PlaybackException) {
+            showError(getString(R.string.video_load_error))
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,14 +91,32 @@ class RendererActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        webView.stopLoading()
-        webView.destroy()
+        if (this::playerView.isInitialized) {
+            releasePlayer()
+        }
+        if (this::webView.isInitialized) {
+            webView.stopLoading()
+            webView.destroy()
+        }
         super.onDestroy()
+    }
+
+    override fun onStop() {
+        exoPlayer?.playWhenReady = false
+        super.onStop()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (this::playerView.isInitialized && playerView.isVisible) {
+            exoPlayer?.playWhenReady = true
+        }
     }
 
     private fun bindViews() {
         webView = findViewById(R.id.rendererWebView)
         imageView = findViewById(R.id.rendererImageView)
+        playerView = findViewById(R.id.rendererPlayerView)
         loadingOverlay = findViewById(R.id.loadingOverlay)
         errorOverlay = findViewById(R.id.errorOverlay)
         errorMessage = findViewById(R.id.errorMessage)
@@ -169,6 +200,7 @@ class RendererActivity : AppCompatActivity() {
         loadingOverlay.isVisible = true
         errorOverlay.isVisible = false
         sourceHintText.isVisible = false
+        stopVideoPlayback()
     }
 
     private fun showContent(state: RendererUiState.Success) {
@@ -179,6 +211,7 @@ class RendererActivity : AppCompatActivity() {
 
         when (val content = state.content.content) {
             is TvRenderContent.Url -> {
+                stopVideoPlayback()
                 imageView.isVisible = false
                 webView.isVisible = true
                 isWebContentVisible = true
@@ -186,6 +219,7 @@ class RendererActivity : AppCompatActivity() {
                 webView.requestFocus()
             }
             is TvRenderContent.Html -> {
+                stopVideoPlayback()
                 imageView.isVisible = false
                 webView.isVisible = true
                 isWebContentVisible = true
@@ -199,6 +233,7 @@ class RendererActivity : AppCompatActivity() {
                 webView.requestFocus()
             }
             is TvRenderContent.Image -> {
+                stopVideoPlayback()
                 webView.isVisible = false
                 imageView.isVisible = true
                 imageView.load(content.value) {
@@ -210,10 +245,14 @@ class RendererActivity : AppCompatActivity() {
                     )
                 }
             }
+            is TvRenderContent.Video -> {
+                showVideo(content.value)
+            }
         }
     }
 
     private fun showError(message: String) {
+        stopVideoPlayback()
         loadingOverlay.isVisible = false
         errorOverlay.isVisible = true
         errorMessage.text = message
@@ -221,6 +260,51 @@ class RendererActivity : AppCompatActivity() {
         webView.isVisible = false
         isWebContentVisible = false
         errorRetryButton.requestFocus()
+    }
+
+    private fun showVideo(url: String) {
+        imageView.isVisible = false
+        webView.isVisible = false
+        isWebContentVisible = false
+        playerView.isVisible = true
+
+        val player = getOrCreatePlayer()
+        player.setMediaItem(MediaItem.fromUri(url))
+        player.prepare()
+        player.playWhenReady = true
+        player.play()
+        playerView.requestFocus()
+    }
+
+    private fun getOrCreatePlayer(): ExoPlayer {
+        exoPlayer?.let { return it }
+        return ExoPlayer.Builder(this).build().also { player ->
+            player.repeatMode = Player.REPEAT_MODE_ONE
+            player.playWhenReady = true
+            player.addListener(exoPlayerListener)
+            playerView.player = player
+            exoPlayer = player
+        }
+    }
+
+    private fun stopVideoPlayback() {
+        playerView.isVisible = false
+        exoPlayer?.run {
+            playWhenReady = false
+            stop()
+            clearMediaItems()
+        }
+    }
+
+    private fun releasePlayer() {
+        exoPlayer?.let { player ->
+            player.removeListener(exoPlayerListener)
+            player.release()
+        }
+        exoPlayer = null
+        if (this::playerView.isInitialized) {
+            playerView.player = null
+        }
     }
 
     private fun handleWebViewDpad(keyCode: Int): Boolean {

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/black">
@@ -22,6 +23,18 @@
         android:contentDescription="@string/rendered_image_content_desc"
         android:scaleType="fitCenter"
         android:visibility="gone" />
+
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/rendererPlayerView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@string/rendered_video_content_desc"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:visibility="gone"
+        app:resize_mode="fit"
+        app:show_buffering="when_playing"
+        app:use_controller="false" />
 
     <LinearLayout
         android:id="@+id/topActions"
@@ -134,4 +147,3 @@
     </LinearLayout>
 
 </FrameLayout>
-

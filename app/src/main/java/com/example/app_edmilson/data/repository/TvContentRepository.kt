@@ -2,6 +2,7 @@ package com.example.app_edmilson.data.repository
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import com.example.app_edmilson.BuildConfig
 import com.example.app_edmilson.data.api.NetworkModule
 import com.example.app_edmilson.data.api.TvContentApiService
@@ -27,13 +28,20 @@ class TvContentRepository(
     suspend fun fetchContent(rawCode: String): Result<FetchResult> {
         val code = TvCodeValidator.normalize(rawCode)
         val endpoint = resolveEndpoint(code)
+        val fullUrl = buildApiUrl(endpoint)
 
         return try {
-            val response = apiService.getTvContent(endpoint)
+            Log.d(TAG, "O que foi enviado para a API: metodo=GET endpoint=$endpoint url=$fullUrl")
+
+            val response = apiService.getTvContent(fullUrl)
             if (!response.isSuccessful) {
+                val errorPayload = response.errorBody()?.string().orEmpty().trim()
+                val details = if (errorPayload.isBlank()) "" else " - $errorPayload"
                 return failureOrCached(
                     code = code,
-                    error = IllegalStateException("API retornou status ${response.code()}")
+                    error = IllegalStateException(
+                        "API retornou status ${response.code()} em $fullUrl$details"
+                    )
                 )
             }
 
@@ -42,6 +50,15 @@ class TvContentRepository(
                     code = code,
                     error = IllegalStateException("Resposta vazia da API")
                 )
+            if (body.success == false) {
+                val apiMessage = body.error?.trim().orEmpty()
+                    .ifBlank { body.message?.trim().orEmpty() }
+                    .ifBlank { "Resposta inválida da API" }
+                return failureOrCached(
+                    code = code,
+                    error = IllegalStateException(apiMessage)
+                )
+            }
             val parsed = TvContentParser.parse(body, requestedCode = code)
                 ?: return failureOrCached(
                     code = code,
@@ -57,12 +74,32 @@ class TvContentRepository(
 
     private fun resolveEndpoint(code: String): String {
         val encodedCode = Uri.encode(code)
-        val template = BuildConfig.API_TV_CONTENT_PATH_TEMPLATE.trim().trimStart('/')
+        val template = BuildConfig.API_TV_CONTENT_PATH_TEMPLATE.trim()
         return when {
             template.contains("%s") -> template.format(encodedCode)
             template.contains("{code}") -> template.replace("{code}", encodedCode)
             else -> "${template.trimEnd('/')}/$encodedCode"
         }
+    }
+
+    private fun buildApiUrl(endpoint: String): String {
+        val trimmedEndpoint = endpoint.trim()
+        if (trimmedEndpoint.startsWith("http://") || trimmedEndpoint.startsWith("https://")) {
+            return trimmedEndpoint
+        }
+        val base = BuildConfig.API_BASE_URL.trim().trimEnd('/')
+        var normalizedEndpoint = trimmedEndpoint.trimStart('/')
+
+        if (base.endsWith("/api", ignoreCase = true) &&
+            normalizedEndpoint.startsWith("api/", ignoreCase = true)
+        ) {
+            normalizedEndpoint = normalizedEndpoint.substring("api/".length)
+        }
+
+        if (normalizedEndpoint.isBlank()) {
+            return base
+        }
+        return "$base/$normalizedEndpoint"
     }
 
     private fun failureOrCached(code: String, error: Throwable): Result<FetchResult> {
@@ -103,6 +140,7 @@ class TvContentRepository(
                 "url" -> TvRenderContent.Url(value)
                 "html" -> TvRenderContent.Html(value)
                 "image" -> TvRenderContent.Image(value)
+                "video" -> TvRenderContent.Video(value)
                 else -> return null
             }
             return ResolvedTvContent(code = code, content = content)
@@ -114,6 +152,7 @@ class TvContentRepository(
                     is TvRenderContent.Url -> CachedTvContent(content.code, "url", payload.value)
                     is TvRenderContent.Html -> CachedTvContent(content.code, "html", payload.value)
                     is TvRenderContent.Image -> CachedTvContent(content.code, "image", payload.value)
+                    is TvRenderContent.Video -> CachedTvContent(content.code, "video", payload.value)
                 }
             }
         }
@@ -121,6 +160,7 @@ class TvContentRepository(
 
     companion object {
         private const val CACHE_PREFS_NAME = "tv_content_cache"
+        private const val TAG = "TvContentRepository"
 
         fun create(context: Context): TvContentRepository {
             val apiService = NetworkModule.createTvContentApiService()

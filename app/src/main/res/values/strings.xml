@@ -16,5 +16,7 @@
     <string name="webview_load_error">Erro ao renderizar a página.</string>
     <string name="image_load_error">Erro ao carregar a imagem.</string>
     <string name="rendered_image_content_desc">Imagem renderizada</string>
+    <string name="rendered_video_content_desc">Vídeo renderizado</string>
+    <string name="video_load_error">Erro ao carregar o vídeo.</string>
     <string name="retry">Tentar novamente</string>
 </resources>

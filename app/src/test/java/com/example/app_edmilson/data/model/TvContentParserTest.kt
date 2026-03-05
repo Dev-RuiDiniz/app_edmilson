@@ -66,4 +66,102 @@ class TvContentParserTest {
         assertNotNull(parsed)
         assertTrue(parsed?.content is TvRenderContent.Html)
     }
+
+    @Test
+    fun `parse wrapped propagandas response`() {
+        val json = """
+            {
+              "success": true,
+              "propagandas": [
+                {
+                  "codigo": "TVA1B2C3D4",
+                  "tipo": "url",
+                  "urlArquivo": "https://meusite.com/tv/TVA1B2C3D4"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val dto = gson.fromJson(json, TvContentResponseDto::class.java)
+        val parsed = TvContentParser.parse(dto, requestedCode = "TVA1B2C3D4")
+
+        assertNotNull(parsed)
+        assertEquals("TVA1B2C3D4", parsed?.code)
+        assertTrue(parsed?.content is TvRenderContent.Url)
+        assertEquals(
+            "https://meusite.com/tv/TVA1B2C3D4",
+            (parsed?.content as TvRenderContent.Url).value
+        )
+    }
+
+    @Test
+    fun `parse explicit video response`() {
+        val json = """
+            {
+              "code": "TVVID001",
+              "type": "video",
+              "url": "https://cdn.exemplo.com/midia/anuncio.mp4"
+            }
+        """.trimIndent()
+
+        val dto = gson.fromJson(json, TvContentResponseDto::class.java)
+        val parsed = TvContentParser.parse(dto, requestedCode = "TVVID001")
+
+        assertNotNull(parsed)
+        assertTrue(parsed?.content is TvRenderContent.Video)
+        assertEquals(
+            "https://cdn.exemplo.com/midia/anuncio.mp4",
+            (parsed?.content as TvRenderContent.Video).value
+        )
+    }
+
+    @Test
+    fun `infer video when url has m3u8 extension`() {
+        val json = """
+            {
+              "url": "https://cdn.exemplo.com/live/canal.m3u8"
+            }
+        """.trimIndent()
+
+        val dto = gson.fromJson(json, TvContentResponseDto::class.java)
+        val parsed = TvContentParser.parse(dto, requestedCode = "TVLIVE001")
+
+        assertNotNull(parsed)
+        assertTrue(parsed?.content is TvRenderContent.Video)
+        assertEquals(
+            "https://cdn.exemplo.com/live/canal.m3u8",
+            (parsed?.content as TvRenderContent.Video).value
+        )
+    }
+
+    @Test
+    fun `parse hotspot payload using tipo_midia and imagem_url`() {
+        val json = """
+            {
+              "success": true,
+              "codigo": "TV8A855CA4",
+              "propagandas": [
+                {
+                  "id": 1,
+                  "imagem_url": "https://hotspot1.edmilsonti.com.br/uploads/tv/tv_18_1772147471_2097.jpg",
+                  "tipo_midia": "imagem",
+                  "titulo": "Ali",
+                  "descricao": "",
+                  "ordem": 1
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val dto = gson.fromJson(json, TvContentResponseDto::class.java)
+        val parsed = TvContentParser.parse(dto, requestedCode = "TV8A855CA4")
+
+        assertNotNull(parsed)
+        assertEquals("TV8A855CA4", parsed?.code)
+        assertTrue(parsed?.content is TvRenderContent.Image)
+        assertEquals(
+            "https://hotspot1.edmilsonti.com.br/uploads/tv/tv_18_1772147471_2097.jpg",
+            (parsed?.content as TvRenderContent.Image).value
+        )
+    }
 }
