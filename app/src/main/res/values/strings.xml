@@ -1,9 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Web Kiosk</string>
-    <string name="offline_message">Sem conexão</string>
+    <string name="app_name">Hotspottv</string>
+    <string name="splash_logo_content_desc">Logo Hotspottv</string>
+    <string name="tv_code_screen_title">Conectar Código TV</string>
+    <string name="tv_code_screen_subtitle">Digite ou selecione um código para carregar o conteúdo.</string>
+    <string name="tv_code_hint">Ex.: TV2665487D</string>
+    <string name="connect_button">Conectar</string>
+    <string name="recent_codes_title">Códigos recentes</string>
+    <string name="invalid_tv_code">Código inválido. Use o formato TV + pelo menos 6 caracteres.</string>
+    <string name="loading_content">Carregando conteúdo...</string>
+    <string name="error_loading_content">Falha ao carregar</string>
+    <string name="reload_button">Recarregar</string>
+    <string name="switch_code_button">Trocar código</string>
+    <string name="showing_cached_content">Exibindo conteúdo em cache</string>
+    <string name="webview_load_error">Erro ao renderizar a página.</string>
+    <string name="image_load_error">Erro ao carregar a imagem.</string>
+    <string name="rendered_image_content_desc">Imagem renderizada</string>
     <string name="retry">Tentar novamente</string>
-    <string name="pairing_title">Escaneie o QR Code para ativar esta TV</string>
-    <string name="pairing_qr_content_desc">QR Code de pareamento</string>
-    <string name="exit_hint">Pressione voltar novamente para sair</string>
 </resources>

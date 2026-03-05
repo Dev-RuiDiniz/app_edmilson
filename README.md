@@ -1,87 +1,72 @@
 # app_edmilson
 
-Projeto Android Kotlin (Gradle) para **mobile + Android TV** com foco em **digital signage**:
-- pareamento por QR Code;
-- sessão persistente no dispositivo;
-- consumo de playlist de propaganda por API;
-- exibição fullscreen de imagem, vídeo e web;
-- retomada do ponto ao reabrir o app.
+App Android (celular + Android TV) em Kotlin para fluxo:
+
+1. inserir/selecionar **Código TV**
+2. consultar API por código
+3. renderizar conteúdo (URL/HTML/Imagem)
 
 ## Requisitos
-- Min SDK: 26 (Android 8)
+- Min SDK: 26
 - Compile SDK: 36
 - Target SDK: 36
-- 1 Activity principal: `MainActivity`
-- Suporte a launcher mobile e `LEANBACK_LAUNCHER` (TV)
+- UI em XML + Activities
 
-## Fluxo funcional atual
-1. No primeiro uso, o app gera `deviceId` + `pairingCode` e mostra QR Code.
-2. O cliente escaneia o QR e autentica no sistema.
-3. O app faz polling da API de status até receber token de acesso.
-4. Após pareado, o app busca a playlist de propaganda e inicia a reprodução.
-5. Em reinício do app/dispositivo:
-  - mantém token/sessão;
-  - volta no item em exibição (e posição do vídeo quando aplicável).
-6. O app só fecha com ação intencional (duplo Back).
+## Fluxo
+1. `MainActivity` exibe input + lista de códigos recentes.
+2. Código válido abre `RendererActivity`.
+3. `RendererActivity` chama endpoint configurável por código.
+4. O retorno é renderizado:
+   - `type = "url"` -> `WebView.loadUrl`
+   - `type = "html"` -> `WebView.loadDataWithBaseURL`
+   - `type = "image"` -> `ImageView` com Coil
+   - sem `type` + `url` válida -> assume URL
 
-## Configurações de integração (BuildConfig)
+## Lógica do sistema
+- Entrada do código:
+  - normaliza para maiúsculo (`TV...`)
+  - valida prefixo `TV` e tamanho mínimo de 6 caracteres
+  - salva histórico local dos últimos códigos usados
+- Consulta API:
+  - usa `Retrofit + OkHttp`
+  - endpoint montado por `API_TV_CONTENT_PATH_TEMPLATE` com substituição `%s` ou `{code}`
+  - código é URL-encoded antes da chamada
+- Parse de resposta:
+  - suporta resposta completa (`code`, `type`, `url/html/imageUrl`) e simples (`url`)
+  - se `type` vier inconsistente (ex.: `type=url` sem `url`), aplica fallback automático para outros campos válidos
+- Cache:
+  - salva o último conteúdo renderizável por código (memória + `SharedPreferences`)
+  - usa cache quando API falha por status HTTP, exceção de rede, resposta vazia ou payload sem conteúdo renderizável
+- Renderização:
+  - `url` e `html` em `WebView`
+  - `image` em `ImageView` (Coil)
+  - estado de `Loading`, `Success`, `Error`, com ação de recarregar e trocar código
+
+## API e BuildConfig
 Arquivo: `app/build.gradle.kts`
 
-```kotlin
-buildConfigField("String", "API_BASE_URL", "\"https://hotspot1.edmilsonti.com.br/api/\"")
-buildConfigField("String", "PAIRING_URL", "\"https://hotspot1.edmilsonti.com.br/tv-pair\"")
-buildConfigField("int", "API_POLL_SECONDS", "15")
-```
+Variáveis suportadas (Gradle property ou env var):
+- `API_BASE_URL` (ex.: `https://hotspot1.edmilsonti.com.br/api/`)
+- `API_TV_CONTENT_PATH_TEMPLATE` (default: `tv/%s/content`)
 
-## Contrato de API esperado no app
-### 1. Status de pareamento
-`GET {API_BASE_URL}tv/devices/{deviceId}/status?code={pairingCode}`
+Exemplos de template aceitos:
+- `tv/%s/content`
+- `tv/{code}/content`
 
-Resposta esperada:
-```json
-{
-  "paired": true,
-  "accessToken": "jwt-ou-token"
-}
-```
-
-### 2. Playlist
-`GET {API_BASE_URL}tv/devices/{deviceId}/playlist?resolution={largura}x{altura}`
-`Authorization: Bearer {token}`
-
-Resposta esperada:
-```json
-{
-  "refreshAfterSeconds": 15,
-  "items": [
-    { "type": "image", "url": "https://...", "durationSeconds": 10 },
-    { "type": "video", "url": "https://..." },
-    { "type": "web", "url": "https://...", "durationSeconds": 15 }
-  ]
-}
-```
-
-## Como rodar (debug)
+## Build
 ```powershell
-.\gradlew.bat assembleDebug
+.\gradlew.bat testDebugUnitTest assembleDebug
 ```
 
 APK debug:
 - `app/build/outputs/apk/debug/app-debug.apk`
 
-## Instalação no BlueStacks
+## Testes
+- Testes unitários atuais:
+  - parse da API (resposta padrão e resposta simples)
+  - fallback de parse quando `type` não casa com o payload
+  - validação de código TV
+- Executar:
 ```powershell
-$apk = (Resolve-Path "app\build\outputs\apk\debug\app-debug.apk").Path
-& "C:\Program Files\BlueStacks_nxt\HD-Player.exe" --instance Pie64 --cmd installApk --filepath "$apk"
-& "C:\Program Files\BlueStacks_nxt\HD-Player.exe" --instance Pie64 --cmd launchApp --package com.example.app_edmilson
+.\gradlew.bat testDebugUnitTest
 ```
-
-## Assinatura release (Google Play)
-O projeto suporta assinatura com `keystore.properties` ou variáveis `RELEASE_*`.
-Sem assinatura configurada, tarefas `Release`/`bundle` falham propositalmente.
-
-Consulte: `docs/release-signing.md`
-
-## Licenças
-- Licença do projeto: `LICENSE` (Apache-2.0)
-- Avisos de terceiros: `THIRD_PARTY_NOTICES.md`

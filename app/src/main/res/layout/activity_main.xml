@@ -1,96 +1,83 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000">
-
-    <androidx.media3.ui.PlayerView
-        android:id="@+id/playerView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="gone"
-        app:resize_mode="fit"
-        app:show_buffering="always"
-        app:use_controller="false" />
-
-    <ImageView
-        android:id="@+id/imageView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:adjustViewBounds="true"
-        android:scaleType="fitCenter"
-        android:visibility="gone" />
-
-    <WebView
-        android:id="@+id/webView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:importantForAutofill="no"
-        android:overScrollMode="never"
-        android:visibility="gone" />
+    android:background="@android:color/black"
+    android:fillViewport="true">
 
     <LinearLayout
-        android:id="@+id/pairingOverlay"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#CC000000"
-        android:gravity="center"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp"
-        android:visibility="gone">
+        android:padding="24dp">
 
         <TextView
-            android:id="@+id/pairingTitle"
+            android:id="@+id/screenTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:text="@string/pairing_title"
-            android:textColor="#FFFFFF"
-            android:textSize="22sp"
+            android:text="@string/tv_code_screen_title"
+            android:textColor="@android:color/white"
+            android:textSize="28sp"
             android:textStyle="bold" />
 
-        <ImageView
-            android:id="@+id/qrCodeImage"
-            android:layout_width="260dp"
-            android:layout_height="260dp"
-            android:layout_marginBottom="12dp"
-            android:contentDescription="@string/pairing_qr_content_desc" />
-
         <TextView
-            android:id="@+id/pairingUrlText"
+            android:id="@+id/screenSubtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:textColor="#FFFFFF"
+            android:layout_marginTop="8dp"
+            android:text="@string/tv_code_screen_subtitle"
+            android:textColor="@android:color/white"
             android:textSize="14sp" />
-    </LinearLayout>
 
-    <LinearLayout
-        android:id="@+id/offlineOverlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#CC000000"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:padding="24dp"
-        android:visibility="gone">
-
-        <TextView
-            android:id="@+id/offlineTitle"
-            android:layout_width="wrap_content"
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/codeInputLayout"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:text="@string/offline_message"
-            android:textColor="#FFFFFF"
-            android:textSize="24sp"
-            android:textStyle="bold" />
+            android:layout_marginTop="24dp"
+            android:hint="@string/tv_code_hint"
+            app:boxBackgroundMode="outline"
+            app:hintTextColor="@android:color/white">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/codeEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:imeOptions="actionDone"
+                android:inputType="textCapCharacters"
+                android:maxLines="1"
+                android:textColor="@android:color/white"
+                android:textColorHint="@android:color/darker_gray" />
+        </com.google.android.material.textfield.TextInputLayout>
 
         <Button
-            android:id="@+id/retryButton"
+            android:id="@+id/connectButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:text="@string/connect_button" />
+
+        <TextView
+            android:id="@+id/recentCodesTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/retry" />
-    </LinearLayout>
+            android:layout_marginTop="24dp"
+            android:text="@string/recent_codes_title"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
-</FrameLayout>
+        <LinearLayout
+            android:id="@+id/recentCodesContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical" />
+    </LinearLayout>
+</ScrollView>
+
