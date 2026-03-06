@@ -16,13 +16,27 @@ object TvContentParser {
             dto.propagandas?.let { items -> addAll(items) }
         }
 
+        val contents = mutableListOf<TvRenderContent>()
+        val contentKeys = linkedSetOf<String>()
+        var resolvedCode = requestedCode
+
         for (candidate in candidates) {
             val parsed = parseItem(candidate, requestedCode)
             if (parsed != null) {
-                return parsed
+                if (contents.isEmpty()) {
+                    resolvedCode = parsed.code
+                }
+                val key = contentKey(parsed.content)
+                if (contentKeys.add(key)) {
+                    contents += parsed.content
+                }
             }
         }
-        return null
+
+        if (contents.isEmpty()) {
+            return null
+        }
+        return ResolvedTvContent(code = resolvedCode, contents = contents)
     }
 
     private fun TvContentResponseDto.asItem(): TvContentItemDto {
@@ -90,7 +104,7 @@ object TvContentParser {
             )
         }
 
-        return content?.let { ResolvedTvContent(code = code, content = it) }
+        return content?.let { ResolvedTvContent(code = code, contents = listOf(it)) }
     }
 
     private fun parseWithoutExplicitType(
@@ -121,5 +135,14 @@ object TvContentParser {
         val path = url.substringBefore('?').substringBefore('#')
         val ext = path.substringAfterLast('.', "").lowercase(Locale.ROOT)
         return ext in videoExtensions
+    }
+
+    private fun contentKey(content: TvRenderContent): String {
+        return when (content) {
+            is TvRenderContent.Url -> "url:${content.value.trim()}"
+            is TvRenderContent.Html -> "html:${content.value.trim()}"
+            is TvRenderContent.Image -> "image:${content.value.trim()}"
+            is TvRenderContent.Video -> "video:${content.value.trim()}"
+        }
     }
 }

@@ -53,5 +53,8 @@ sealed class TvRenderContent {
 
 data class ResolvedTvContent(
     val code: String,
+    val contents: List<TvRenderContent>
+) {
     val content: TvRenderContent
-)
+        get() = contents.first()
+}

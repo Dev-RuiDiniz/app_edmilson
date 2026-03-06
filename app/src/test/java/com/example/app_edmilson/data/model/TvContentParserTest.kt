@@ -116,6 +116,34 @@ class TvContentParserTest {
     }
 
     @Test
+    fun `parse multiple propagandas preserving order`() {
+        val json = """
+            {
+              "success": true,
+              "codigo": "TVPLAY001",
+              "propagandas": [
+                {
+                  "tipo_midia": "imagem",
+                  "imagem_url": "https://cdn.exemplo.com/imagens/slide-1.jpg"
+                },
+                {
+                  "tipo_midia": "video",
+                  "video_url": "https://cdn.exemplo.com/videos/anuncio.mp4"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val dto = gson.fromJson(json, TvContentResponseDto::class.java)
+        val parsed = TvContentParser.parse(dto, requestedCode = "TVPLAY001")
+
+        assertNotNull(parsed)
+        assertEquals(2, parsed?.contents?.size)
+        assertTrue(parsed?.contents?.get(0) is TvRenderContent.Image)
+        assertTrue(parsed?.contents?.get(1) is TvRenderContent.Video)
+    }
+
+    @Test
     fun `infer video when url has m3u8 extension`() {
         val json = """
             {

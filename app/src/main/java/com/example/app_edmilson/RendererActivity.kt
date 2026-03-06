@@ -33,6 +33,8 @@ import com.example.app_edmilson.data.repository.TvContentRepository
 import com.example.app_edmilson.ui.renderer.RendererUiState
 import com.example.app_edmilson.ui.renderer.RendererViewModel
 import com.example.app_edmilson.ui.renderer.RendererViewModelFactory
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class RendererActivity : AppCompatActivity() {
@@ -56,10 +58,19 @@ class RendererActivity : AppCompatActivity() {
     private var tvCode: String = ""
     private var isWebContentVisible: Boolean = false
     private var exoPlayer: ExoPlayer? = null
+    private var playlist: List<TvRenderContent> = emptyList()
+    private var currentPlaylistIndex: Int = 0
+    private var contentAdvanceJob: Job? = null
 
     private val exoPlayerListener = object : Player.Listener {
         override fun onPlayerError(error: PlaybackException) {
             showError(getString(R.string.video_load_error))
+        }
+
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState == Player.STATE_ENDED) {
+                moveToNextContent()
+            }
         }
     }
 
@@ -91,6 +102,7 @@ class RendererActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        cancelScheduledAdvance()
         if (this::playerView.isInitialized) {
             releasePlayer()
         }
@@ -164,10 +176,22 @@ class RendererActivity : AppCompatActivity() {
     }
 
     private fun configureActions() {
-        reloadButton.setOnClickListener { viewModel.reload() }
-        switchCodeButton.setOnClickListener { finish() }
-        errorRetryButton.setOnClickListener { viewModel.reload() }
-        errorSwitchCodeButton.setOnClickListener { finish() }
+        reloadButton.setOnClickListener {
+            cancelScheduledAdvance()
+            viewModel.reload()
+        }
+        switchCodeButton.setOnClickListener {
+            cancelScheduledAdvance()
+            finish()
+        }
+        errorRetryButton.setOnClickListener {
+            cancelScheduledAdvance()
+            viewModel.reload()
+        }
+        errorSwitchCodeButton.setOnClickListener {
+            cancelScheduledAdvance()
+            finish()
+        }
     }
 
     private fun configureBackNavigation() {
@@ -197,6 +221,7 @@ class RendererActivity : AppCompatActivity() {
     }
 
     private fun showLoading() {
+        cancelScheduledAdvance()
         loadingOverlay.isVisible = true
         errorOverlay.isVisible = false
         sourceHintText.isVisible = false
@@ -208,8 +233,22 @@ class RendererActivity : AppCompatActivity() {
         errorOverlay.isVisible = false
         sourceHintText.isVisible = state.fromCache
         isWebContentVisible = false
+        playlist = state.content.contents
+        currentPlaylistIndex = 0
 
-        when (val content = state.content.content) {
+        if (playlist.isEmpty()) {
+            showError(getString(R.string.error_loading_content))
+            return
+        }
+        renderCurrentContent()
+    }
+
+    private fun renderCurrentContent() {
+        if (playlist.isEmpty()) {
+            showError(getString(R.string.error_loading_content))
+            return
+        }
+        when (val content = playlist[currentPlaylistIndex]) {
             is TvRenderContent.Url -> {
                 stopVideoPlayback()
                 imageView.isVisible = false
@@ -217,6 +256,7 @@ class RendererActivity : AppCompatActivity() {
                 isWebContentVisible = true
                 webView.loadUrl(content.value)
                 webView.requestFocus()
+                scheduleNextContent()
             }
             is TvRenderContent.Html -> {
                 stopVideoPlayback()
@@ -231,6 +271,7 @@ class RendererActivity : AppCompatActivity() {
                     null
                 )
                 webView.requestFocus()
+                scheduleNextContent()
             }
             is TvRenderContent.Image -> {
                 stopVideoPlayback()
@@ -239,6 +280,9 @@ class RendererActivity : AppCompatActivity() {
                 imageView.load(content.value) {
                     crossfade(true)
                     listener(
+                        onSuccess = { _, _ ->
+                            scheduleNextContent()
+                        },
                         onError = { _, _ ->
                             showError(getString(R.string.image_load_error))
                         }
@@ -252,6 +296,7 @@ class RendererActivity : AppCompatActivity() {
     }
 
     private fun showError(message: String) {
+        cancelScheduledAdvance()
         stopVideoPlayback()
         loadingOverlay.isVisible = false
         errorOverlay.isVisible = true
@@ -279,7 +324,7 @@ class RendererActivity : AppCompatActivity() {
     private fun getOrCreatePlayer(): ExoPlayer {
         exoPlayer?.let { return it }
         return ExoPlayer.Builder(this).build().also { player ->
-            player.repeatMode = Player.REPEAT_MODE_ONE
+            player.repeatMode = Player.REPEAT_MODE_OFF
             player.playWhenReady = true
             player.addListener(exoPlayerListener)
             playerView.player = player
@@ -305,6 +350,31 @@ class RendererActivity : AppCompatActivity() {
         if (this::playerView.isInitialized) {
             playerView.player = null
         }
+    }
+
+    private fun scheduleNextContent() {
+        cancelScheduledAdvance()
+        if (playlist.isEmpty()) {
+            return
+        }
+        contentAdvanceJob = lifecycleScope.launch {
+            delay(IMAGE_DURATION_MS)
+            moveToNextContent()
+        }
+    }
+
+    private fun moveToNextContent() {
+        if (playlist.isEmpty()) {
+            return
+        }
+        cancelScheduledAdvance()
+        currentPlaylistIndex = (currentPlaylistIndex + 1) % playlist.size
+        renderCurrentContent()
+    }
+
+    private fun cancelScheduledAdvance() {
+        contentAdvanceJob?.cancel()
+        contentAdvanceJob = null
     }
 
     private fun handleWebViewDpad(keyCode: Int): Boolean {
@@ -334,6 +404,7 @@ class RendererActivity : AppCompatActivity() {
 
     companion object {
         private const val EXTRA_TV_CODE = "extra_tv_code"
+        private const val IMAGE_DURATION_MS = 30_000L
 
         fun newIntent(context: Context, code: String): Intent {
             return Intent(context, RendererActivity::class.java)

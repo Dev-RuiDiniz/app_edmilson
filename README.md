@@ -4,7 +4,7 @@ App Android (celular + Android TV) em Kotlin para fluxo:
 
 1. inserir/selecionar **Código TV**
 2. consultar API por código
-3. renderizar conteúdo (URL/HTML/Imagem/Vídeo)
+3. renderizar conteúdo em playlist (URL/HTML/Imagem/Vídeo)
 
 ## Requisitos
 - Min SDK: 26
@@ -34,15 +34,28 @@ App Android (celular + Android TV) em Kotlin para fluxo:
   - código é URL-encoded antes da chamada
 - Parse de resposta:
   - suporta resposta completa (`code`, `type`, `url/html/imageUrl`) e simples (`url`)
+  - suporta item único (`data`, `propaganda`) e lista (`propagandas`)
   - se `type` vier inconsistente (ex.: `type=url` sem `url`), aplica fallback automático para outros campos válidos
+  - remove duplicados de mídia na lista final mantendo ordem de chegada da API
 - Cache:
-  - salva o último conteúdo renderizável por código (memória + `SharedPreferences`)
+  - salva a última playlist renderizável por código (memória + `SharedPreferences`)
   - usa cache quando API falha por status HTTP, exceção de rede, resposta vazia ou payload sem conteúdo renderizável
 - Renderização:
   - `url` e `html` em `WebView`
   - `image` em `ImageView` (Coil)
-  - `video` em `PlayerView` (ExoPlayer), com autoplay e loop
+  - `video` em `PlayerView` (ExoPlayer), com autoplay
+  - imagem/URL/HTML avançam automaticamente a cada 30s
+  - vídeo toca até o fim e então avança para o próximo item
+  - quando há somente 1 vídeo, o player reinicia automaticamente em loop de playlist
   - estado de `Loading`, `Success`, `Error`, com ação de recarregar e trocar código
+
+## Launcher Icon (Android/Android TV)
+- Adaptive icon ativo em:
+  - `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`
+  - `app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml`
+- Foreground com `inset` seguro:
+  - `app/src/main/res/drawable/ic_launcher_foreground.xml`
+- Ícones legados (`mipmap-mdpi` até `mipmap-xxxhdpi`) regenerados com conteúdo centralizado em safe zone (~66%), evitando corte de texto em launchers com máscaras diferentes.
 
 ## API e BuildConfig
 Arquivo: `app/build.gradle.kts`
@@ -82,8 +95,15 @@ adb -s 127.0.0.1:5555 shell monkey -p com.example.app_edmilson -c android.intent
 - Testes unitários atuais:
   - parse da API (resposta padrão e resposta simples)
   - fallback de parse quando `type` não casa com o payload
+  - montagem de playlist com múltiplas propagandas em ordem
   - validação de código TV
 - Executar:
 ```powershell
 .\gradlew.bat testDebugUnitTest
 ```
+
+## Documentação
+- `docs/sprint-1.md`
+- `docs/sprint-2.md`
+- `docs/sprint-3.md`
+- `docs/release-signing.md`
