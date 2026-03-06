@@ -11,6 +11,8 @@ import com.example.app_edmilson.data.model.TvCodeValidator
 import com.example.app_edmilson.data.model.TvContentParser
 import com.example.app_edmilson.data.model.TvRenderContent
 import com.google.gson.Gson
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 
 class TvContentRepository(
     private val apiService: TvContentApiService,
@@ -50,9 +52,8 @@ class TvContentRepository(
                     code = code,
                     error = IllegalStateException("Resposta vazia da API")
                 )
-            if (body.success == false) {
-                val apiMessage = body.error?.trim().orEmpty()
-                    .ifBlank { body.message?.trim().orEmpty() }
+            if (body.isApiFailure()) {
+                val apiMessage = body.apiErrorMessage()
                     .ifBlank { "Resposta inválida da API" }
                 return failureOrCached(
                     code = code,
@@ -129,6 +130,41 @@ class TvContentRepository(
     }
 
     private fun cacheKey(code: String): String = "content_$code"
+
+    private fun JsonElement.isApiFailure(): Boolean {
+        val root = asJsonObjectOrNull() ?: return false
+        val successFlag = root["success"]?.asBooleanOrNull()
+        return successFlag == false
+    }
+
+    private fun JsonElement.apiErrorMessage(): String {
+        val root = asJsonObjectOrNull() ?: return ""
+        return root.readString("error", "erro", "message", "mensagem")
+    }
+
+    private fun JsonElement.asJsonObjectOrNull(): JsonObject? {
+        return if (isJsonObject) asJsonObject else null
+    }
+
+    private fun JsonObject.readString(vararg keys: String): String {
+        for (key in keys) {
+            val raw = this[key]?.asStringOrNull()?.trim().orEmpty()
+            if (raw.isNotBlank()) {
+                return raw
+            }
+        }
+        return ""
+    }
+
+    private fun JsonElement.asStringOrNull(): String? {
+        if (isJsonNull || !isJsonPrimitive) return null
+        return runCatching { asString }.getOrNull()
+    }
+
+    private fun JsonElement.asBooleanOrNull(): Boolean? {
+        if (isJsonNull || !isJsonPrimitive) return null
+        return runCatching { asBoolean }.getOrNull()
+    }
 
     private data class CachedTvContent(
         val code: String,

@@ -1,14 +1,12 @@
 package com.example.app_edmilson.data.model
 
-import com.google.gson.Gson
+import com.google.gson.JsonParser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TvContentParserTest {
-
-    private val gson = Gson()
 
     @Test
     fun `parse standard response with explicit type`() {
@@ -20,8 +18,7 @@ class TvContentParserTest {
             }
         """.trimIndent()
 
-        val dto = gson.fromJson(json, TvContentResponseDto::class.java)
-        val parsed = TvContentParser.parse(dto, requestedCode = "TV2665487D")
+        val parsed = TvContentParser.parse(JsonParser.parseString(json), requestedCode = "TV2665487D")
 
         assertEquals("TV2665487D", parsed?.code)
         assertTrue(parsed?.content is TvRenderContent.Url)
@@ -39,8 +36,7 @@ class TvContentParserTest {
             }
         """.trimIndent()
 
-        val dto = gson.fromJson(json, TvContentResponseDto::class.java)
-        val parsed = TvContentParser.parse(dto, requestedCode = "TV45F5738D")
+        val parsed = TvContentParser.parse(JsonParser.parseString(json), requestedCode = "TV45F5738D")
 
         assertEquals("TV45F5738D", parsed?.code)
         assertTrue(parsed?.content is TvRenderContent.Url)
@@ -60,8 +56,7 @@ class TvContentParserTest {
             }
         """.trimIndent()
 
-        val dto = gson.fromJson(json, TvContentResponseDto::class.java)
-        val parsed = TvContentParser.parse(dto, requestedCode = "TV45F5738D")
+        val parsed = TvContentParser.parse(JsonParser.parseString(json), requestedCode = "TV45F5738D")
 
         assertNotNull(parsed)
         assertTrue(parsed?.content is TvRenderContent.Html)
@@ -82,8 +77,7 @@ class TvContentParserTest {
             }
         """.trimIndent()
 
-        val dto = gson.fromJson(json, TvContentResponseDto::class.java)
-        val parsed = TvContentParser.parse(dto, requestedCode = "TVA1B2C3D4")
+        val parsed = TvContentParser.parse(JsonParser.parseString(json), requestedCode = "TVA1B2C3D4")
 
         assertNotNull(parsed)
         assertEquals("TVA1B2C3D4", parsed?.code)
@@ -104,8 +98,7 @@ class TvContentParserTest {
             }
         """.trimIndent()
 
-        val dto = gson.fromJson(json, TvContentResponseDto::class.java)
-        val parsed = TvContentParser.parse(dto, requestedCode = "TVVID001")
+        val parsed = TvContentParser.parse(JsonParser.parseString(json), requestedCode = "TVVID001")
 
         assertNotNull(parsed)
         assertTrue(parsed?.content is TvRenderContent.Video)
@@ -134,8 +127,7 @@ class TvContentParserTest {
             }
         """.trimIndent()
 
-        val dto = gson.fromJson(json, TvContentResponseDto::class.java)
-        val parsed = TvContentParser.parse(dto, requestedCode = "TVPLAY001")
+        val parsed = TvContentParser.parse(JsonParser.parseString(json), requestedCode = "TVPLAY001")
 
         assertNotNull(parsed)
         assertEquals(2, parsed?.contents?.size)
@@ -151,8 +143,7 @@ class TvContentParserTest {
             }
         """.trimIndent()
 
-        val dto = gson.fromJson(json, TvContentResponseDto::class.java)
-        val parsed = TvContentParser.parse(dto, requestedCode = "TVLIVE001")
+        val parsed = TvContentParser.parse(JsonParser.parseString(json), requestedCode = "TVLIVE001")
 
         assertNotNull(parsed)
         assertTrue(parsed?.content is TvRenderContent.Video)
@@ -181,14 +172,60 @@ class TvContentParserTest {
             }
         """.trimIndent()
 
-        val dto = gson.fromJson(json, TvContentResponseDto::class.java)
-        val parsed = TvContentParser.parse(dto, requestedCode = "TV8A855CA4")
+        val parsed = TvContentParser.parse(JsonParser.parseString(json), requestedCode = "TV8A855CA4")
 
         assertNotNull(parsed)
         assertEquals("TV8A855CA4", parsed?.code)
         assertTrue(parsed?.content is TvRenderContent.Image)
         assertEquals(
             "https://hotspot1.edmilsonti.com.br/uploads/tv/tv_18_1772147471_2097.jpg",
+            (parsed?.content as TvRenderContent.Image).value
+        )
+    }
+
+    @Test
+    fun `parse response when data is an array`() {
+        val json = """
+            {
+              "success": true,
+              "data": [
+                {
+                  "tipo_midia": "video",
+                  "video_url": "https://cdn.exemplo.com/midia/spot.mp4"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val parsed = TvContentParser.parse(JsonParser.parseString(json), requestedCode = "TVDATA001")
+
+        assertNotNull(parsed)
+        assertEquals("TVDATA001", parsed?.code)
+        assertTrue(parsed?.content is TvRenderContent.Video)
+    }
+
+    @Test
+    fun `parse nested media object`() {
+        val json = """
+            {
+              "success": true,
+              "propagandas": [
+                {
+                  "midia": {
+                    "tipo": "imagem",
+                    "url": "https://cdn.exemplo.com/img/banner.jpg"
+                  }
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val parsed = TvContentParser.parse(JsonParser.parseString(json), requestedCode = "TVMEDIA001")
+
+        assertNotNull(parsed)
+        assertTrue(parsed?.content is TvRenderContent.Image)
+        assertEquals(
+            "https://cdn.exemplo.com/img/banner.jpg",
             (parsed?.content as TvRenderContent.Image).value
         )
     }

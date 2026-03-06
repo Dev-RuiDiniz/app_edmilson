@@ -1,5 +1,7 @@
 package com.example.app_edmilson.data.model
 
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import java.util.Locale
 
 object TvContentParser {
@@ -8,14 +10,8 @@ object TvContentParser {
         "mp4", "m4v", "webm", "mkv", "mov", "avi", "3gp", "m3u8", "mpd", "ts"
     )
 
-    fun parse(dto: TvContentResponseDto, requestedCode: String): ResolvedTvContent? {
-        val candidates = buildList {
-            add(dto.asItem())
-            dto.data?.let(::add)
-            dto.propaganda?.let(::add)
-            dto.propagandas?.let { items -> addAll(items) }
-        }
-
+    fun parse(payload: JsonElement?, requestedCode: String): ResolvedTvContent? {
+        val candidates = extractCandidates(payload)
         val contents = mutableListOf<TvRenderContent>()
         val contentKeys = linkedSetOf<String>()
         var resolvedCode = requestedCode
@@ -39,24 +35,113 @@ object TvContentParser {
         return ResolvedTvContent(code = resolvedCode, contents = contents)
     }
 
-    private fun TvContentResponseDto.asItem(): TvContentItemDto {
-        return TvContentItemDto(
-            code = code,
-            type = type,
-            url = url,
-            html = html,
-            imageUrl = imageUrl,
-            videoUrl = videoUrl
-        )
+    private fun extractCandidates(payload: JsonElement?): List<JsonObject> {
+        if (payload == null || payload.isJsonNull) return emptyList()
+        val result = mutableListOf<JsonObject>()
+
+        fun collect(element: JsonElement?) {
+            if (element == null || element.isJsonNull) return
+            when {
+                element.isJsonObject -> result += element.asJsonObject
+                element.isJsonArray -> element.asJsonArray.forEach { item ->
+                    if (item.isJsonObject) {
+                        result += item.asJsonObject
+                    }
+                }
+            }
+        }
+
+        collect(payload)
+        if (payload.isJsonObject) {
+            val root = payload.asJsonObject
+            collect(root["data"])
+            collect(root["propaganda"])
+            collect(root["propagandas"])
+            collect(root["items"])
+            collect(root["itens"])
+            collect(root["playlist"])
+            collect(root["midias"])
+        }
+
+        return result
     }
 
-    private fun parseItem(item: TvContentItemDto, requestedCode: String): ResolvedTvContent? {
-        val code = item.code?.trim().orEmpty().ifBlank { requestedCode }
-        val type = item.type?.trim().orEmpty().lowercase()
-        val url = item.url?.trim().orEmpty()
-        val html = item.html?.trim().orEmpty()
-        val imageUrl = item.imageUrl?.trim().orEmpty()
-        val videoUrl = item.videoUrl?.trim().orEmpty()
+    private fun parseItem(item: JsonObject, requestedCode: String): ResolvedTvContent? {
+        val media = item.getObject("midia", "media")
+
+        val code = item.readString("code", "codigo")
+            .ifBlank { media?.readString("code", "codigo").orEmpty() }
+            .ifBlank { requestedCode }
+
+        val type = item.readString("type", "tipo", "tipo_midia", "tipoMidia")
+            .ifBlank { media?.readString("type", "tipo", "tipo_midia", "tipoMidia").orEmpty() }
+            .lowercase()
+
+        val url = item.readString(
+            "url",
+            "link",
+            "urlCompleta",
+            "arquivo",
+            "mediaUrl",
+            "urlArquivo",
+            "url_arquivo",
+            "midia_url",
+            "media_url"
+        ).ifBlank {
+            media?.readString(
+                "url",
+                "link",
+                "urlCompleta",
+                "arquivo",
+                "mediaUrl",
+                "urlArquivo",
+                "url_arquivo",
+                "midia_url",
+                "media_url"
+            ).orEmpty()
+        }
+        val html = item.readString("html", "conteudoHtml", "conteudo")
+            .ifBlank { media?.readString("html", "conteudoHtml", "conteudo").orEmpty() }
+        val imageUrl = item.readString(
+            "imageUrl",
+            "imagemUrl",
+            "image_url",
+            "imagem_url",
+            "urlImagem",
+            "imagem",
+            "imagemUrlCompleta",
+            "url_imagem"
+        ).ifBlank {
+            media?.readString(
+                "imageUrl",
+                "imagemUrl",
+                "image_url",
+                "imagem_url",
+                "urlImagem",
+                "imagem",
+                "imagemUrlCompleta",
+                "url_imagem"
+            ).orEmpty()
+        }
+        val videoUrl = item.readString(
+            "videoUrl",
+            "video_url",
+            "urlVideo",
+            "video",
+            "arquivoVideo",
+            "videoUrlCompleta",
+            "url_video"
+        ).ifBlank {
+            media?.readString(
+                "videoUrl",
+                "video_url",
+                "urlVideo",
+                "video",
+                "arquivoVideo",
+                "videoUrlCompleta",
+                "url_video"
+            ).orEmpty()
+        }
 
         val content = when (type) {
             "video", "vídeo", "mp4", "m3u8", "hls", "dash", "stream" -> {
@@ -144,5 +229,30 @@ object TvContentParser {
             is TvRenderContent.Image -> "image:${content.value.trim()}"
             is TvRenderContent.Video -> "video:${content.value.trim()}"
         }
+    }
+
+    private fun JsonObject.readString(vararg keys: String): String {
+        for (key in keys) {
+            val raw = this[key]?.asStringOrNull()?.trim().orEmpty()
+            if (raw.isNotBlank()) {
+                return raw
+            }
+        }
+        return ""
+    }
+
+    private fun JsonObject.getObject(vararg keys: String): JsonObject? {
+        for (key in keys) {
+            val candidate = this[key]
+            if (candidate != null && candidate.isJsonObject) {
+                return candidate.asJsonObject
+            }
+        }
+        return null
+    }
+
+    private fun JsonElement.asStringOrNull(): String? {
+        if (isJsonNull || !isJsonPrimitive) return null
+        return runCatching { asString }.getOrNull()
     }
 }
