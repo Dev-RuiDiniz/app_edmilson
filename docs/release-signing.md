@@ -34,8 +34,8 @@ Sem esses campos, tarefas `Release` e `bundle` falham propositalmente.
 ## Checklist de publicação
 1. Confirmar endpoints de produção em:
    - `BuildConfig.API_BASE_URL`
-   - `BuildConfig.PAIRING_URL`
-   - `BuildConfig.API_POLL_SECONDS`
+   - `BuildConfig.API_TV_CONTENT_PATH_TEMPLATE`
+   - `BuildConfig.TV_DEFAULT_DISPLAY_DURATION_SECONDS`
 2. Incrementar `versionCode` e atualizar `versionName`
 3. Gerar `bundleRelease`
 4. Validar app em dispositivo real

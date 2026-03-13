@@ -6,6 +6,8 @@ A API TV serve para o app de TV, como o aplicativo na TV do estabelecimento, obt
 
 O estabelecimento é identificado pelo código TV. Cada Mikrotik possui um código, configurado no painel do cliente em `TV -> Código TV por Mikrotik`.
 
+Cada propaganda também pode informar sua própria duração de exibição no app.
+
 ## Autenticação
 
 A autenticação é obrigatória via `api_key`, enviada de uma destas formas:
@@ -29,7 +31,7 @@ Todas as rotas abaixo utilizam o método `GET`.
 
 ## 1. Listar propagandas
 
-Uso: o app de TV chama este endpoint periodicamente, ou ao iniciar, para obter as imagens que devem ser exibidas no rotativo.
+Uso: o app de TV chama este endpoint periodicamente, ou ao iniciar, para obter as propagandas que devem ser exibidas no rotativo.
 
 ### Endpoint
 
@@ -46,6 +48,18 @@ GET /api/tv/propagandas
 
 Alternativa: enviar `X-API-Key: SUA_API_KEY` no header e manter apenas `?codigo=XXX` na query string.
 
+### Campos aceitos por item de propaganda
+
+| Campo | Obrigatório | Descrição |
+| --- | --- | --- |
+| `imagem_url` / `url` / `video_url` / `html` | Sim | Conteúdo a renderizar |
+| `duracao` ou `duration` | Não | Tempo de exibição em segundos para `imagem`, `url` e `html` |
+
+Regras:
+- O app prioriza `duracao`/`duration` por item quando o campo vier preenchido com valor numérico maior que zero.
+- Se o campo não vier, for inválido ou `<= 0`, o app usa o fallback local configurado em `TV_DEFAULT_DISPLAY_DURATION_SECONDS`.
+- Vídeos continuam reproduzindo até o fim do arquivo ou stream e só então avançam para o próximo item.
+
 ### Resposta 200
 
 ```json
@@ -56,6 +70,7 @@ Alternativa: enviar `X-API-Key: SUA_API_KEY` no header e manter apenas `?codigo=
     {
       "id": 1,
       "imagem_url": "https://.../uploads/tv/tv_123_...jpg",
+      "duracao": 20,
       "titulo": "Promocao Especial",
       "descricao": "...",
       "ordem": 0
@@ -131,9 +146,10 @@ curl -G "https://hotspot1.edmilsonti.com.br/api/tv/registrar-exibicao" \
 
 1. Na configuração do app, o usuário informa o código TV e, se necessário, a API key.
 2. Ao iniciar o app, ou em intervalo periódico, como a cada 5 minutos, chamar `GET /api/tv/propagandas?codigo=XXX&api_key=YYY`.
-3. Exibir as imagens em rotativo, ordenando pelo campo `ordem`.
-4. Utilizar `imagem_url`, que já é retornada como URL absoluta.
-5. Opcionalmente, cada vez que uma propaganda for exibida, chamar `GET /api/tv/registrar-exibicao?id=ID&codigo=XXX&api_key=YYY` para atualizar o contador no painel.
+3. Exibir as propagandas em rotativo, ordenando pelo campo `ordem`.
+4. Utilizar `imagem_url`, `url`, `video_url` ou `html`, conforme o tipo retornado.
+5. Quando disponível, aplicar `duracao`/`duration` em segundos por item para `imagem`, `url` e `html`.
+6. Opcionalmente, cada vez que uma propaganda for exibida, chamar `GET /api/tv/registrar-exibicao?id=ID&codigo=XXX&api_key=YYY` para atualizar o contador no painel.
 
 ## Segurança
 

@@ -5,7 +5,7 @@
 - Sprint: 3
 
 ## Objetivo
-Garantir exibicao continua de conteudo da API em formato playlist (imagem/video/url/html) e corrigir o dimensionamento do launcher icon para Android Phone e Android TV.
+Garantir exibicao continua de conteudo da API em formato playlist (imagem/video/url/html), permitir duracao configuravel por item e corrigir o dimensionamento do launcher icon para Android Phone e Android TV.
 
 ## Escopo entregue
 - Player orientado a playlist:
@@ -13,17 +13,19 @@ Garantir exibicao continua de conteudo da API em formato playlist (imagem/video/
   - ciclo continuo entre itens;
   - deduplicacao por tipo+URL, preservando ordem da API.
 - Regras de reproducao:
-  - imagem: troca automatica a cada 30s;
-  - url/html: avancam a cada 30s;
+  - imagem: usa `duracao`/`duration` da API em segundos, com fallback global de 30s;
+  - url/html: usam `duracao`/`duration` da API em segundos, com fallback global de 30s;
   - video: reproduz ate o fim e avanca;
   - se houver somente um video, reinicia automaticamente (loop de playlist).
 - Cache atualizado:
   - persistencia de playlist completa em `SharedPreferences`;
+  - persistencia da duracao por item;
   - retrocompatibilidade com cache antigo de item unico.
 - Launcher icon:
   - adaptive icon mantido em `mipmap-anydpi-v26`;
-  - foreground movido para camada com `inset` de seguranca;
-  - icones legacy (`mipmap-*`) regenerados com area util central (~66%) para evitar corte/compressao.
+  - arte-base atualizada para `icone.jpeg`;
+  - foreground com `inset` de seguranca;
+  - icones legacy (`mipmap-*`) regenerados com margem central para evitar corte/compressao.
 
 ## Arquivos principais alterados
 - `app/src/main/java/com/example/app_edmilson/RendererActivity.kt`
@@ -31,6 +33,7 @@ Garantir exibicao continua de conteudo da API em formato playlist (imagem/video/
 - `app/src/main/java/com/example/app_edmilson/data/model/TvContentResponseDto.kt`
 - `app/src/main/java/com/example/app_edmilson/data/repository/TvContentRepository.kt`
 - `app/src/test/java/com/example/app_edmilson/data/model/TvContentParserTest.kt`
+- `app/src/test/java/com/example/app_edmilson/data/repository/CachedTvContentTest.kt`
 - `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`
 - `app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml`
 - `app/src/main/res/drawable/ic_launcher_foreground.xml`
@@ -52,10 +55,12 @@ Resultado:
 ## Resultado funcional esperado
 - API com multiplos itens: app percorre todos em loop.
 - Sequencia imagem + video:
-  - imagem por 30s;
+  - imagem pelo tempo enviado em `duracao`/`duration` ou 30s no fallback;
   - video ate terminar;
   - proximo item automaticamente.
 - Um unico video:
   - toca inteiro;
   - reinicia automaticamente sem travar em tela de erro.
-
+- URL/HTML:
+  - usam a duracao por item quando a API informar;
+  - sem duracao valida, usam o fallback global configurado.

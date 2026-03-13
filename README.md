@@ -44,7 +44,8 @@ App Android (celular + Android TV) em Kotlin para fluxo:
   - `url` e `html` em `WebView`
   - `image` em `ImageView` (Coil)
   - `video` em `PlayerView` (ExoPlayer), com autoplay
-  - imagem/URL/HTML avançam automaticamente a cada 30s
+  - imagem/URL/HTML usam `duracao`/`duration` da API quando disponível
+  - fallback global de exibição para imagem/URL/HTML: `30s`
   - vídeo toca até o fim e então avança para o próximo item
   - quando há somente 1 vídeo, o player reinicia automaticamente em loop de playlist
   - estado de `Loading`, `Success`, `Error`, com ação de recarregar e trocar código
@@ -53,9 +54,11 @@ App Android (celular + Android TV) em Kotlin para fluxo:
 - Adaptive icon ativo em:
   - `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`
   - `app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml`
-- Foreground com `inset` seguro:
+- Arte-base do launcher:
+  - `icone.jpeg`
+- Foreground com `inset` seguro para manter a arte inteira visível:
   - `app/src/main/res/drawable/ic_launcher_foreground.xml`
-- Ícones legados (`mipmap-mdpi` até `mipmap-xxxhdpi`) regenerados com conteúdo centralizado em safe zone (~66%), evitando corte de texto em launchers com máscaras diferentes.
+- Ícones legados (`mipmap-mdpi` até `mipmap-xxxhdpi`) regenerados com conteúdo centralizado e margem de segurança, evitando corte de texto em launchers com máscaras diferentes.
 
 ## API e BuildConfig
 Arquivo: `app/build.gradle.kts`
@@ -63,6 +66,7 @@ Arquivo: `app/build.gradle.kts`
 Variáveis suportadas (Gradle property ou env var):
 - `API_BASE_URL` (ex.: `https://hotspot1.edmilsonti.com.br`)
 - `API_TV_CONTENT_PATH_TEMPLATE` (default: `api/tv/propagandas?codigo={code}&api_key=TV56beafcbe547ac8d6b4a95685efb2dc39b7b260fb645b55a`)
+- `TV_DEFAULT_DISPLAY_DURATION_SECONDS` (default: `30`)
 
 Exemplos de template aceitos:
 - `api/tv/propagandas?codigo={code}`
@@ -73,6 +77,11 @@ Exemplos de template aceitos:
 Regra de montagem da URL:
 - URL da API = Base + endpoint.
 - Ex.: `https://hotspot1.edmilsonti.com.br` + `api/tv/propagandas?codigo=TV2665487D&api_key=TV56beafcbe547ac8d6b4a95685efb2dc39b7b260fb645b55a`.
+
+Contrato de duração por item:
+- A API pode enviar `duracao` ou `duration` em segundos para cada item de `propagandas`.
+- O app converte esse valor para milissegundos internamente.
+- Valores ausentes, inválidos ou `<= 0` usam `TV_DEFAULT_DISPLAY_DURATION_SECONDS`.
 
 ## Build
 ```powershell
