@@ -256,7 +256,7 @@ class RendererActivity : AppCompatActivity() {
                 isWebContentVisible = true
                 webView.loadUrl(content.value)
                 webView.requestFocus()
-                scheduleNextContent()
+                scheduleNextContent(content)
             }
             is TvRenderContent.Html -> {
                 stopVideoPlayback()
@@ -271,7 +271,7 @@ class RendererActivity : AppCompatActivity() {
                     null
                 )
                 webView.requestFocus()
-                scheduleNextContent()
+                scheduleNextContent(content)
             }
             is TvRenderContent.Image -> {
                 stopVideoPlayback()
@@ -281,7 +281,7 @@ class RendererActivity : AppCompatActivity() {
                     crossfade(true)
                     listener(
                         onSuccess = { _, _ ->
-                            scheduleNextContent()
+                            scheduleNextContent(content)
                         },
                         onError = { _, _ ->
                             showError(getString(R.string.image_load_error))
@@ -352,13 +352,19 @@ class RendererActivity : AppCompatActivity() {
         }
     }
 
-    private fun scheduleNextContent() {
+    private fun scheduleNextContent(content: TvRenderContent) {
         cancelScheduledAdvance()
         if (playlist.isEmpty()) {
             return
         }
+        if (content is TvRenderContent.Video) {
+            return
+        }
+        val displayDurationMs = content.displayDurationMs
+            ?.takeIf { it > 0 }
+            ?: DEFAULT_DISPLAY_DURATION_MS
         contentAdvanceJob = lifecycleScope.launch {
-            delay(IMAGE_DURATION_MS)
+            delay(displayDurationMs)
             moveToNextContent()
         }
     }
@@ -404,7 +410,8 @@ class RendererActivity : AppCompatActivity() {
 
     companion object {
         private const val EXTRA_TV_CODE = "extra_tv_code"
-        private const val IMAGE_DURATION_MS = 30_000L
+        private const val DEFAULT_DISPLAY_DURATION_MS =
+            BuildConfig.TV_DEFAULT_DISPLAY_DURATION_SECONDS * 1_000L
 
         fun newIntent(context: Context, code: String): Intent {
             return Intent(context, RendererActivity::class.java)

@@ -42,6 +42,14 @@ fun readStringConfig(key: String, defaultValue: String): String {
     return value
 }
 
+fun readPositiveLongConfig(key: String, defaultValue: Long): Long {
+    val rawValue = (project.findProperty(key) as String?)
+        ?.takeIf { it.isNotBlank() }
+        ?: System.getenv(key)?.takeIf { it.isNotBlank() }
+        ?: return defaultValue
+    return rawValue.toLongOrNull()?.takeIf { it > 0 } ?: defaultValue
+}
+
 fun asBuildConfigString(value: String): String {
     val escaped = value.replace("\\", "\\\\").replace("\"", "\\\"")
     return "\"$escaped\""
@@ -80,6 +88,11 @@ android {
                     "api/tv/propagandas?codigo={code}&api_key=TV56beafcbe547ac8d6b4a95685efb2dc39b7b260fb645b55a"
                 )
             )
+        )
+        buildConfigField(
+            "long",
+            "TV_DEFAULT_DISPLAY_DURATION_SECONDS",
+            "${readPositiveLongConfig("TV_DEFAULT_DISPLAY_DURATION_SECONDS", 30)}L"
         )
     }
 

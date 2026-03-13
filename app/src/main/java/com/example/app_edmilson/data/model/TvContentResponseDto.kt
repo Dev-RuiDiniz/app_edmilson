@@ -5,6 +5,7 @@ import com.google.gson.annotations.SerializedName
 data class TvContentResponseDto(
     @SerializedName(value = "code", alternate = ["codigo"]) val code: String? = null,
     @SerializedName(value = "type", alternate = ["tipo", "tipo_midia", "tipoMidia"]) val type: String? = null,
+    @SerializedName(value = "duration", alternate = ["duracao"]) val duration: Long? = null,
     @SerializedName(
         value = "url",
         alternate = ["link", "urlCompleta", "arquivo", "mediaUrl", "urlArquivo", "url_arquivo"]
@@ -29,6 +30,7 @@ data class TvContentResponseDto(
 data class TvContentItemDto(
     @SerializedName(value = "code", alternate = ["codigo"]) val code: String? = null,
     @SerializedName(value = "type", alternate = ["tipo", "tipo_midia", "tipoMidia"]) val type: String? = null,
+    @SerializedName(value = "duration", alternate = ["duracao"]) val duration: Long? = null,
     @SerializedName(
         value = "url",
         alternate = ["link", "urlCompleta", "arquivo", "mediaUrl", "urlArquivo", "url_arquivo"]
@@ -44,11 +46,29 @@ data class TvContentItemDto(
     ) val videoUrl: String? = null
 )
 
-sealed class TvRenderContent {
-    data class Url(val value: String) : TvRenderContent()
-    data class Html(val value: String) : TvRenderContent()
-    data class Image(val value: String) : TvRenderContent()
-    data class Video(val value: String) : TvRenderContent()
+sealed class TvRenderContent(
+    open val value: String,
+    open val displayDurationMs: Long? = null
+) {
+    data class Url(
+        override val value: String,
+        override val displayDurationMs: Long? = null
+    ) : TvRenderContent(value, displayDurationMs)
+
+    data class Html(
+        override val value: String,
+        override val displayDurationMs: Long? = null
+    ) : TvRenderContent(value, displayDurationMs)
+
+    data class Image(
+        override val value: String,
+        override val displayDurationMs: Long? = null
+    ) : TvRenderContent(value, displayDurationMs)
+
+    data class Video(
+        override val value: String,
+        override val displayDurationMs: Long? = null
+    ) : TvRenderContent(value, displayDurationMs)
 }
 
 data class ResolvedTvContent(

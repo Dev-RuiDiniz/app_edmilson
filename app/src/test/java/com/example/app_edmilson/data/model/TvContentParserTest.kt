@@ -3,6 +3,7 @@ package com.example.app_edmilson.data.model
 import com.google.gson.JsonParser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -14,18 +15,21 @@ class TvContentParserTest {
             {
               "code": "TV2665487D",
               "type": "url",
+              "duracao": 45,
               "url": "https://meusite.com/tv/TV2665487D"
             }
         """.trimIndent()
 
         val parsed = TvContentParser.parse(JsonParser.parseString(json), requestedCode = "TV2665487D")
+        val resolved = checkNotNull(parsed)
 
-        assertEquals("TV2665487D", parsed?.code)
-        assertTrue(parsed?.content is TvRenderContent.Url)
+        assertEquals("TV2665487D", resolved.code)
+        assertTrue(resolved.content is TvRenderContent.Url)
         assertEquals(
             "https://meusite.com/tv/TV2665487D",
-            (parsed?.content as TvRenderContent.Url).value
+            (resolved.content as TvRenderContent.Url).value
         )
+        assertEquals(45_000L, (resolved.content as TvRenderContent.Url).displayDurationMs)
     }
 
     @Test
@@ -213,7 +217,8 @@ class TvContentParserTest {
                 {
                   "midia": {
                     "tipo": "imagem",
-                    "url": "https://cdn.exemplo.com/img/banner.jpg"
+                    "url": "https://cdn.exemplo.com/img/banner.jpg",
+                    "duration": 12
                   }
                 }
               ]
@@ -221,12 +226,42 @@ class TvContentParserTest {
         """.trimIndent()
 
         val parsed = TvContentParser.parse(JsonParser.parseString(json), requestedCode = "TVMEDIA001")
+        val resolved = checkNotNull(parsed)
 
-        assertNotNull(parsed)
-        assertTrue(parsed?.content is TvRenderContent.Image)
+        assertTrue(resolved.content is TvRenderContent.Image)
         assertEquals(
             "https://cdn.exemplo.com/img/banner.jpg",
-            (parsed?.content as TvRenderContent.Image).value
+            (resolved.content as TvRenderContent.Image).value
         )
+        assertEquals(12_000L, (resolved.content as TvRenderContent.Image).displayDurationMs)
+    }
+
+    @Test
+    fun `ignore invalid or non positive duration`() {
+        val json = """
+            {
+              "success": true,
+              "propagandas": [
+                {
+                  "tipo_midia": "imagem",
+                  "imagem_url": "https://cdn.exemplo.com/img/banner.jpg",
+                  "duracao": 0
+                },
+                {
+                  "tipo_midia": "url",
+                  "url": "https://cdn.exemplo.com/page",
+                  "duration": "invalido"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val parsed = TvContentParser.parse(JsonParser.parseString(json), requestedCode = "TVDUR001")
+        val resolved = checkNotNull(parsed)
+
+        assertTrue(resolved.contents[0] is TvRenderContent.Image)
+        assertNull((resolved.contents[0] as TvRenderContent.Image).displayDurationMs)
+        assertTrue(resolved.contents[1] is TvRenderContent.Url)
+        assertNull((resolved.contents[1] as TvRenderContent.Url).displayDurationMs)
     }
 }

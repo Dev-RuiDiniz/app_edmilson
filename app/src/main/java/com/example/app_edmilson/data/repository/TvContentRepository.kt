@@ -166,59 +166,6 @@ class TvContentRepository(
         return runCatching { asBoolean }.getOrNull()
     }
 
-    private data class CachedTvContent(
-        val code: String,
-        val items: List<CachedTvContentItem>? = null,
-        val type: String? = null,
-        val value: String? = null
-    ) {
-        fun toResolved(): ResolvedTvContent? {
-            val parsedItems = when {
-                !items.isNullOrEmpty() -> items.mapNotNull { it.toRenderContent() }
-                !type.isNullOrBlank() && !value.isNullOrBlank() -> {
-                    listOf(CachedTvContentItem(type = type, value = value).toRenderContent() ?: return null)
-                }
-                else -> return null
-            }
-            if (parsedItems.isEmpty()) {
-                return null
-            }
-            return ResolvedTvContent(code = code, contents = parsedItems)
-        }
-
-        companion object {
-            fun from(content: ResolvedTvContent): CachedTvContent {
-                val cacheItems = content.contents.map { payload ->
-                    when (payload) {
-                        is TvRenderContent.Url -> CachedTvContentItem("url", payload.value)
-                        is TvRenderContent.Html -> CachedTvContentItem("html", payload.value)
-                        is TvRenderContent.Image -> CachedTvContentItem("image", payload.value)
-                        is TvRenderContent.Video -> CachedTvContentItem("video", payload.value)
-                    }
-                }
-                return CachedTvContent(
-                    code = content.code,
-                    items = cacheItems
-                )
-            }
-        }
-    }
-
-    private data class CachedTvContentItem(
-        val type: String,
-        val value: String
-    ) {
-        fun toRenderContent(): TvRenderContent? {
-            return when (type) {
-                "url" -> TvRenderContent.Url(value)
-                "html" -> TvRenderContent.Html(value)
-                "image" -> TvRenderContent.Image(value)
-                "video" -> TvRenderContent.Video(value)
-                else -> null
-            }
-        }
-    }
-
     companion object {
         private const val CACHE_PREFS_NAME = "tv_content_cache"
         private const val TAG = "TvContentRepository"
@@ -229,6 +176,75 @@ class TvContentRepository(
                 apiService = apiService,
                 context = context.applicationContext
             )
+        }
+    }
+}
+
+internal data class CachedTvContent(
+    val code: String,
+    val items: List<CachedTvContentItem>? = null,
+    val type: String? = null,
+    val value: String? = null,
+    val displayDurationMs: Long? = null
+) {
+    fun toResolved(): ResolvedTvContent? {
+        val parsedItems = when {
+            !items.isNullOrEmpty() -> items.mapNotNull { it.toRenderContent() }
+            !type.isNullOrBlank() && !value.isNullOrBlank() -> {
+                listOf(
+                    CachedTvContentItem(
+                        type = type,
+                        value = value,
+                        displayDurationMs = displayDurationMs
+                    ).toRenderContent() ?: return null
+                )
+            }
+            else -> return null
+        }
+        if (parsedItems.isEmpty()) {
+            return null
+        }
+        return ResolvedTvContent(code = code, contents = parsedItems)
+    }
+
+    companion object {
+        fun from(content: ResolvedTvContent): CachedTvContent {
+            val cacheItems = content.contents.map { payload ->
+                when (payload) {
+                    is TvRenderContent.Url -> {
+                        CachedTvContentItem("url", payload.value, payload.displayDurationMs)
+                    }
+                    is TvRenderContent.Html -> {
+                        CachedTvContentItem("html", payload.value, payload.displayDurationMs)
+                    }
+                    is TvRenderContent.Image -> {
+                        CachedTvContentItem("image", payload.value, payload.displayDurationMs)
+                    }
+                    is TvRenderContent.Video -> {
+                        CachedTvContentItem("video", payload.value, payload.displayDurationMs)
+                    }
+                }
+            }
+            return CachedTvContent(
+                code = content.code,
+                items = cacheItems
+            )
+        }
+    }
+}
+
+internal data class CachedTvContentItem(
+    val type: String,
+    val value: String,
+    val displayDurationMs: Long? = null
+) {
+    fun toRenderContent(): TvRenderContent? {
+        return when (type) {
+            "url" -> TvRenderContent.Url(value, displayDurationMs)
+            "html" -> TvRenderContent.Html(value, displayDurationMs)
+            "image" -> TvRenderContent.Image(value, displayDurationMs)
+            "video" -> TvRenderContent.Video(value, displayDurationMs)
+            else -> null
         }
     }
 }
