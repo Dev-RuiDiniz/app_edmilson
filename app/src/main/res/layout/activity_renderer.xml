@@ -37,29 +37,66 @@
         app:use_controller="false" />
 
     <LinearLayout
-        android:id="@+id/topActions"
-        android:layout_width="match_parent"
+        android:id="@+id/controlsOverlay"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:gravity="end"
-        android:orientation="horizontal"
-        android:padding="12dp">
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_margin="16dp"
+        android:background="#B3000000"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:visibility="gone">
 
-        <Button
-            android:id="@+id/reloadButton"
+        <TextView
+            android:id="@+id/displayDurationText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:focusable="true"
-            android:focusableInTouchMode="true"
-            android:text="@string/reload_button" />
+            android:layout_marginBottom="8dp"
+            android:text="@string/display_duration_default"
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            android:textStyle="bold" />
 
-        <Button
-            android:id="@+id/switchCodeButton"
+        <TextView
+            android:id="@+id/countdownText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:focusable="true"
-            android:focusableInTouchMode="true"
-            android:text="@string/switch_code_button" />
+            android:layout_marginBottom="8dp"
+            android:text="@string/countdown_unavailable"
+            android:textColor="@android:color/white"
+            android:textSize="13sp" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/swapContentButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:text="@string/swap_content_button" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/homeButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:text="@string/home_button" />
+        </LinearLayout>
     </LinearLayout>
 
     <TextView
@@ -143,7 +180,7 @@
             android:layout_marginTop="8dp"
             android:focusable="true"
             android:focusableInTouchMode="true"
-            android:text="@string/switch_code_button" />
+            android:text="@string/home_button" />
     </LinearLayout>
 
 </FrameLayout>

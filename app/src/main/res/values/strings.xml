@@ -10,8 +10,7 @@
     <string name="invalid_tv_code">Código inválido. Use o formato TV + pelo menos 6 caracteres.</string>
     <string name="loading_content">Carregando conteúdo...</string>
     <string name="error_loading_content">Falha ao carregar</string>
-    <string name="reload_button">Recarregar</string>
-    <string name="switch_code_button">Trocar código</string>
+    <string name="home_button">Início</string>
     <string name="showing_cached_content">Exibindo conteúdo em cache</string>
     <string name="webview_load_error">Erro ao renderizar a página.</string>
     <string name="image_load_error">Erro ao carregar a imagem.</string>
@@ -19,4 +18,11 @@
     <string name="rendered_video_content_desc">Vídeo renderizado</string>
     <string name="video_load_error">Erro ao carregar o vídeo.</string>
     <string name="retry">Tentar novamente</string>
+    <string name="swap_content_button">Trocar</string>
+    <string name="display_duration_default">Tempo: 60s</string>
+    <string name="display_duration_fixed">Tempo: 60s</string>
+    <string name="display_duration_video">Tempo: vídeo até o fim</string>
+    <string name="countdown_remaining">Restante: %1$ss</string>
+    <string name="countdown_unavailable">Restante: --</string>
+    <string name="countdown_video_live">Restante: vídeo em reprodução</string>
 </resources>

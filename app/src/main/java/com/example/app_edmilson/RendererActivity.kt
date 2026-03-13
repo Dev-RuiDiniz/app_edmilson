@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceError
@@ -44,9 +45,12 @@ class RendererActivity : AppCompatActivity() {
     private lateinit var playerView: PlayerView
     private lateinit var loadingOverlay: View
     private lateinit var errorOverlay: View
+    private lateinit var controlsOverlay: View
     private lateinit var errorMessage: TextView
-    private lateinit var reloadButton: Button
-    private lateinit var switchCodeButton: Button
+    private lateinit var swapContentButton: Button
+    private lateinit var displayDurationText: TextView
+    private lateinit var countdownText: TextView
+    private lateinit var homeButton: Button
     private lateinit var errorRetryButton: Button
     private lateinit var errorSwitchCodeButton: Button
     private lateinit var sourceHintText: TextView
@@ -61,6 +65,9 @@ class RendererActivity : AppCompatActivity() {
     private var playlist: List<TvRenderContent> = emptyList()
     private var currentPlaylistIndex: Int = 0
     private var contentAdvanceJob: Job? = null
+    private var controlsHideJob: Job? = null
+    private var countdownJob: Job? = null
+    private var currentRenderToken: Long = 0L
 
     private val exoPlayerListener = object : Player.Listener {
         override fun onPlayerError(error: PlaybackException) {
@@ -91,18 +98,48 @@ class RendererActivity : AppCompatActivity() {
         observeUiState()
 
         viewModel.load(tvCode)
-        reloadButton.requestFocus()
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN && isWebContentVisible && handleWebViewDpad(event.keyCode)) {
+        if (
+            this::controlsOverlay.isInitialized &&
+            event.action == KeyEvent.ACTION_DOWN &&
+            shouldShowControlsFromKey(event.keyCode)
+        ) {
+            if (!controlsOverlay.isVisible && shouldAllowControlsOverlay()) {
+                showControlsTemporarily()
+                return true
+            }
+            if (controlsOverlay.isVisible) {
+                showControlsTemporarily()
+            }
+        }
+        if (
+            event.action == KeyEvent.ACTION_DOWN &&
+            isWebContentVisible &&
+            !controlsOverlay.isVisible &&
+            handleWebViewDpad(event.keyCode)
+        ) {
             return true
         }
         return super.dispatchKeyEvent(event)
     }
 
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (event.action == MotionEvent.ACTION_DOWN && shouldAllowControlsOverlay()) {
+            if (!controlsOverlay.isVisible) {
+                showControlsTemporarily()
+                return true
+            }
+            showControlsTemporarily()
+        }
+        return super.dispatchTouchEvent(event)
+    }
+
     override fun onDestroy() {
         cancelScheduledAdvance()
+        cancelControlsAutoHide()
+        cancelCountdown()
         if (this::playerView.isInitialized) {
             releasePlayer()
         }
@@ -131,9 +168,12 @@ class RendererActivity : AppCompatActivity() {
         playerView = findViewById(R.id.rendererPlayerView)
         loadingOverlay = findViewById(R.id.loadingOverlay)
         errorOverlay = findViewById(R.id.errorOverlay)
+        controlsOverlay = findViewById(R.id.controlsOverlay)
         errorMessage = findViewById(R.id.errorMessage)
-        reloadButton = findViewById(R.id.reloadButton)
-        switchCodeButton = findViewById(R.id.switchCodeButton)
+        swapContentButton = findViewById(R.id.swapContentButton)
+        displayDurationText = findViewById(R.id.displayDurationText)
+        countdownText = findViewById(R.id.countdownText)
+        homeButton = findViewById(R.id.homeButton)
         errorRetryButton = findViewById(R.id.errorRetryButton)
         errorSwitchCodeButton = findViewById(R.id.errorSwitchCodeButton)
         sourceHintText = findViewById(R.id.sourceHintText)
@@ -176,13 +216,14 @@ class RendererActivity : AppCompatActivity() {
     }
 
     private fun configureActions() {
-        reloadButton.setOnClickListener {
+        homeButton.setOnClickListener {
             cancelScheduledAdvance()
-            viewModel.reload()
+            hideControls()
+            goToHome()
         }
-        switchCodeButton.setOnClickListener {
-            cancelScheduledAdvance()
-            finish()
+        swapContentButton.setOnClickListener {
+            moveToNextContent()
+            showControlsTemporarily()
         }
         errorRetryButton.setOnClickListener {
             cancelScheduledAdvance()
@@ -190,13 +231,17 @@ class RendererActivity : AppCompatActivity() {
         }
         errorSwitchCodeButton.setOnClickListener {
             cancelScheduledAdvance()
-            finish()
+            goToHome()
         }
     }
 
     private fun configureBackNavigation() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
+                if (controlsOverlay.isVisible) {
+                    hideControls()
+                    return
+                }
                 if (isWebContentVisible && webView.canGoBack()) {
                     webView.goBack()
                     return
@@ -222,6 +267,8 @@ class RendererActivity : AppCompatActivity() {
 
     private fun showLoading() {
         cancelScheduledAdvance()
+        cancelCountdown()
+        hideControls()
         loadingOverlay.isVisible = true
         errorOverlay.isVisible = false
         sourceHintText.isVisible = false
@@ -235,6 +282,8 @@ class RendererActivity : AppCompatActivity() {
         isWebContentVisible = false
         playlist = state.content.contents
         currentPlaylistIndex = 0
+        hideControls()
+        updateControlsState()
 
         if (playlist.isEmpty()) {
             showError(getString(R.string.error_loading_content))
@@ -248,6 +297,9 @@ class RendererActivity : AppCompatActivity() {
             showError(getString(R.string.error_loading_content))
             return
         }
+        cancelScheduledAdvance()
+        cancelCountdown()
+        val renderToken = ++currentRenderToken
         when (val content = playlist[currentPlaylistIndex]) {
             is TvRenderContent.Url -> {
                 stopVideoPlayback()
@@ -256,7 +308,7 @@ class RendererActivity : AppCompatActivity() {
                 isWebContentVisible = true
                 webView.loadUrl(content.value)
                 webView.requestFocus()
-                scheduleNextContent(content)
+                scheduleNextContent(content, renderToken)
             }
             is TvRenderContent.Html -> {
                 stopVideoPlayback()
@@ -271,7 +323,7 @@ class RendererActivity : AppCompatActivity() {
                     null
                 )
                 webView.requestFocus()
-                scheduleNextContent(content)
+                scheduleNextContent(content, renderToken)
             }
             is TvRenderContent.Image -> {
                 stopVideoPlayback()
@@ -281,23 +333,29 @@ class RendererActivity : AppCompatActivity() {
                     crossfade(true)
                     listener(
                         onSuccess = { _, _ ->
-                            scheduleNextContent(content)
+                            if (renderToken == currentRenderToken) {
+                                scheduleNextContent(content, renderToken)
+                            }
                         },
                         onError = { _, _ ->
-                            showError(getString(R.string.image_load_error))
+                            if (renderToken == currentRenderToken) {
+                                showError(getString(R.string.image_load_error))
+                            }
                         }
                     )
                 }
             }
             is TvRenderContent.Video -> {
-                showVideo(content.value)
+                showVideo(content.value, renderToken)
             }
         }
     }
 
     private fun showError(message: String) {
         cancelScheduledAdvance()
+        cancelCountdown()
         stopVideoPlayback()
+        hideControls()
         loadingOverlay.isVisible = false
         errorOverlay.isVisible = true
         errorMessage.text = message
@@ -307,11 +365,12 @@ class RendererActivity : AppCompatActivity() {
         errorRetryButton.requestFocus()
     }
 
-    private fun showVideo(url: String) {
+    private fun showVideo(url: String, renderToken: Long) {
         imageView.isVisible = false
         webView.isVisible = false
         isWebContentVisible = false
         playerView.isVisible = true
+        updateControlsState()
 
         val player = getOrCreatePlayer()
         player.setMediaItem(MediaItem.fromUri(url))
@@ -319,6 +378,7 @@ class RendererActivity : AppCompatActivity() {
         player.playWhenReady = true
         player.play()
         playerView.requestFocus()
+        startVideoCountdown(renderToken)
     }
 
     private fun getOrCreatePlayer(): ExoPlayer {
@@ -352,21 +412,24 @@ class RendererActivity : AppCompatActivity() {
         }
     }
 
-    private fun scheduleNextContent(content: TvRenderContent) {
+    private fun scheduleNextContent(content: TvRenderContent, renderToken: Long) {
         cancelScheduledAdvance()
+        cancelCountdown()
         if (playlist.isEmpty()) {
             return
         }
         if (content is TvRenderContent.Video) {
             return
         }
-        val displayDurationMs = content.displayDurationMs
-            ?.takeIf { it > 0 }
-            ?: DEFAULT_DISPLAY_DURATION_MS
+        val displayDurationMs = resolveDisplayDurationMs(content)
+        startCountdown(displayDurationMs, renderToken)
         contentAdvanceJob = lifecycleScope.launch {
             delay(displayDurationMs)
-            moveToNextContent()
+            if (renderToken == currentRenderToken) {
+                moveToNextContent()
+            }
         }
+        updateControlsState()
     }
 
     private fun moveToNextContent() {
@@ -381,6 +444,142 @@ class RendererActivity : AppCompatActivity() {
     private fun cancelScheduledAdvance() {
         contentAdvanceJob?.cancel()
         contentAdvanceJob = null
+    }
+
+    private fun startCountdown(durationMs: Long, renderToken: Long) {
+        val endAt = System.currentTimeMillis() + durationMs
+        updateCountdownLabel(durationMs)
+        countdownJob = lifecycleScope.launch {
+            while (renderToken == currentRenderToken) {
+                val remainingMs = (endAt - System.currentTimeMillis()).coerceAtLeast(0L)
+                updateCountdownLabel(remainingMs)
+                if (remainingMs <= 0L) {
+                    break
+                }
+                delay(1_000L)
+            }
+        }
+    }
+
+    private fun startVideoCountdown(renderToken: Long) {
+        cancelCountdown()
+        countdownJob = lifecycleScope.launch {
+            while (renderToken == currentRenderToken) {
+                val player = exoPlayer
+                val durationMs = player?.duration ?: 0L
+                val positionMs = player?.currentPosition ?: 0L
+                countdownText.text = if (durationMs > 0L) {
+                    getString(
+                        R.string.countdown_remaining,
+                        millisToSeconds((durationMs - positionMs).coerceAtLeast(0L))
+                    )
+                } else {
+                    getString(R.string.countdown_video_live)
+                }
+                delay(1_000L)
+            }
+        }
+    }
+
+    private fun cancelCountdown() {
+        countdownJob?.cancel()
+        countdownJob = null
+        if (this::countdownText.isInitialized) {
+            countdownText.text = getString(R.string.countdown_unavailable)
+        }
+    }
+
+    private fun resolveDisplayDurationMs(content: TvRenderContent): Long {
+        return when (content) {
+            is TvRenderContent.Video -> content.displayDurationMs
+                ?.takeIf { it > 0 }
+                ?: DEFAULT_DISPLAY_DURATION_MS
+            else -> FIXED_DISPLAY_DURATION_MS
+        }
+    }
+
+    private fun updateControlsState() {
+        if (!this::controlsOverlay.isInitialized) {
+            return
+        }
+        val hasItems = playlist.isNotEmpty()
+        swapContentButton.isEnabled = hasItems
+
+        when (val currentContent = playlist.getOrNull(currentPlaylistIndex)) {
+            is TvRenderContent.Video -> {
+                displayDurationText.text = getString(R.string.display_duration_video)
+            }
+            is TvRenderContent.Url,
+            is TvRenderContent.Html,
+            is TvRenderContent.Image -> {
+                displayDurationText.text = getString(R.string.display_duration_fixed)
+            }
+            null -> {
+                displayDurationText.text = getString(R.string.display_duration_default)
+            }
+        }
+    }
+
+    private fun updateCountdownLabel(remainingMs: Long) {
+        countdownText.text = getString(
+            R.string.countdown_remaining,
+            millisToSeconds(remainingMs)
+        )
+    }
+
+    private fun millisToSeconds(durationMs: Long): Long {
+        return (durationMs + 999L) / 1_000L
+    }
+
+    private fun shouldAllowControlsOverlay(): Boolean {
+        return playlist.isNotEmpty() && !loadingOverlay.isVisible && !errorOverlay.isVisible
+    }
+
+    private fun shouldShowControlsFromKey(keyCode: Int): Boolean {
+        return when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER,
+            KeyEvent.KEYCODE_MENU -> true
+            else -> false
+        }
+    }
+
+    private fun showControlsTemporarily() {
+        if (!shouldAllowControlsOverlay()) {
+            return
+        }
+        updateControlsState()
+        controlsOverlay.isVisible = true
+        when {
+            swapContentButton.isEnabled -> swapContentButton.requestFocus()
+            else -> homeButton.requestFocus()
+        }
+        cancelControlsAutoHide()
+        controlsHideJob = lifecycleScope.launch {
+            delay(CONTROLS_AUTO_HIDE_MS)
+            controlsOverlay.isVisible = false
+        }
+    }
+
+    private fun hideControls() {
+        cancelControlsAutoHide()
+        if (this::controlsOverlay.isInitialized) {
+            controlsOverlay.isVisible = false
+        }
+    }
+
+    private fun cancelControlsAutoHide() {
+        controlsHideJob?.cancel()
+        controlsHideJob = null
+    }
+
+    private fun goToHome() {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        }
+        startActivity(intent)
+        finish()
     }
 
     private fun handleWebViewDpad(keyCode: Int): Boolean {
@@ -412,6 +611,8 @@ class RendererActivity : AppCompatActivity() {
         private const val EXTRA_TV_CODE = "extra_tv_code"
         private const val DEFAULT_DISPLAY_DURATION_MS =
             BuildConfig.TV_DEFAULT_DISPLAY_DURATION_SECONDS * 1_000L
+        private const val FIXED_DISPLAY_DURATION_MS = 60_000L
+        private const val CONTROLS_AUTO_HIDE_MS = 4_000L
 
         fun newIntent(context: Context, code: String): Intent {
             return Intent(context, RendererActivity::class.java)
