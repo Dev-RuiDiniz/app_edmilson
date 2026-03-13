@@ -107,11 +107,12 @@ class RendererActivity : AppCompatActivity() {
             shouldShowControlsFromKey(event.keyCode)
         ) {
             if (!controlsOverlay.isVisible && shouldAllowControlsOverlay()) {
-                showControlsTemporarily()
+                showControlsTemporarily(requestInitialFocus = true)
                 return true
             }
-            if (controlsOverlay.isVisible) {
+            if (controlsOverlay.isVisible && event.keyCode == KeyEvent.KEYCODE_MENU) {
                 showControlsTemporarily()
+                return true
             }
         }
         if (
@@ -128,7 +129,7 @@ class RendererActivity : AppCompatActivity() {
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_DOWN && shouldAllowControlsOverlay()) {
             if (!controlsOverlay.isVisible) {
-                showControlsTemporarily()
+                showControlsTemporarily(requestInitialFocus = true)
                 return true
             }
             showControlsTemporarily()
@@ -545,15 +546,18 @@ class RendererActivity : AppCompatActivity() {
         }
     }
 
-    private fun showControlsTemporarily() {
+    private fun showControlsTemporarily(requestInitialFocus: Boolean = false) {
         if (!shouldAllowControlsOverlay()) {
             return
         }
         updateControlsState()
+        val wasVisible = controlsOverlay.isVisible
         controlsOverlay.isVisible = true
-        when {
-            swapContentButton.isEnabled -> swapContentButton.requestFocus()
-            else -> homeButton.requestFocus()
+        if (requestInitialFocus || !wasVisible) {
+            when {
+                swapContentButton.isEnabled -> swapContentButton.requestFocus()
+                else -> homeButton.requestFocus()
+            }
         }
         cancelControlsAutoHide()
         controlsHideJob = lifecycleScope.launch {
