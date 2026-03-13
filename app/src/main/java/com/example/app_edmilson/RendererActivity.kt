@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.graphics.Rect
 import android.view.View
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceError
@@ -127,6 +128,14 @@ class RendererActivity : AppCompatActivity() {
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (
+            event.action == MotionEvent.ACTION_DOWN &&
+            this::controlsOverlay.isInitialized &&
+            controlsOverlay.isVisible &&
+            isTouchInsideView(event, controlsOverlay)
+        ) {
+            return super.dispatchTouchEvent(event)
+        }
         if (event.action == MotionEvent.ACTION_DOWN && shouldAllowControlsOverlay()) {
             if (!controlsOverlay.isVisible) {
                 showControlsTemporarily(requestInitialFocus = true)
@@ -576,6 +585,12 @@ class RendererActivity : AppCompatActivity() {
     private fun cancelControlsAutoHide() {
         controlsHideJob?.cancel()
         controlsHideJob = null
+    }
+
+    private fun isTouchInsideView(event: MotionEvent, view: View): Boolean {
+        val rect = Rect()
+        view.getGlobalVisibleRect(rect)
+        return rect.contains(event.rawX.toInt(), event.rawY.toInt())
     }
 
     private fun goToHome() {
