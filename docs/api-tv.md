@@ -53,12 +53,12 @@ Alternativa: enviar `X-API-Key: SUA_API_KEY` no header e manter apenas `?codigo=
 | Campo | Obrigatório | Descrição |
 | --- | --- | --- |
 | `imagem_url` / `url` / `video_url` / `html` | Sim | Conteúdo a renderizar |
-| `duracao` ou `duration` | Não | Tempo de exibição em segundos para `imagem`, `url` e `html` |
+| `duracao` ou `duration` | Não | Tempo de exibição em segundos enviado pela API |
 
 Regras:
-- O app prioriza `duracao`/`duration` por item quando o campo vier preenchido com valor numérico maior que zero.
-- Se o campo não vier, for inválido ou `<= 0`, o app usa o fallback local configurado em `TV_DEFAULT_DISPLAY_DURATION_SECONDS`.
+- Na interface atual do app, `imagem`, `url` e `html` usam exibição fixa de `60s`.
 - Vídeos continuam reproduzindo até o fim do arquivo ou stream e só então avançam para o próximo item.
+- Quando a duração do vídeo é conhecida pelo player, o app mostra esse tempo no overlay e no contador de tempo restante.
 
 ### Resposta 200
 
@@ -148,7 +148,7 @@ curl -G "https://hotspot1.edmilsonti.com.br/api/tv/registrar-exibicao" \
 2. Ao iniciar o app, ou em intervalo periódico, como a cada 5 minutos, chamar `GET /api/tv/propagandas?codigo=XXX&api_key=YYY`.
 3. Exibir as propagandas em rotativo, ordenando pelo campo `ordem`.
 4. Utilizar `imagem_url`, `url`, `video_url` ou `html`, conforme o tipo retornado.
-5. Quando disponível, aplicar `duracao`/`duration` em segundos por item para `imagem`, `url` e `html`.
+5. Exibir `imagem`, `url` e `html` por `60s` na interface atual do app.
 6. Opcionalmente, cada vez que uma propaganda for exibida, chamar `GET /api/tv/registrar-exibicao?id=ID&codigo=XXX&api_key=YYY` para atualizar o contador no painel.
 
 ## Segurança

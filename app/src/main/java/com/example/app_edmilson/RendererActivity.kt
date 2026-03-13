@@ -478,6 +478,14 @@ class RendererActivity : AppCompatActivity() {
                 val player = exoPlayer
                 val durationMs = player?.duration ?: 0L
                 val positionMs = player?.currentPosition ?: 0L
+                if (durationMs > 0L) {
+                    displayDurationText.text = getString(
+                        R.string.display_duration_video_seconds,
+                        millisToSeconds(durationMs)
+                    )
+                } else {
+                    displayDurationText.text = getString(R.string.display_duration_video)
+                }
                 countdownText.text = if (durationMs > 0L) {
                     getString(
                         R.string.countdown_remaining,

@@ -44,11 +44,13 @@ App Android (celular + Android TV) em Kotlin para fluxo:
   - `url` e `html` em `WebView`
   - `image` em `ImageView` (Coil)
   - `video` em `PlayerView` (ExoPlayer), com autoplay
-  - imagem/URL/HTML usam `duracao`/`duration` da API quando disponível
-  - fallback global de exibição para imagem/URL/HTML: `30s`
-  - vídeo toca até o fim e então avança para o próximo item
+  - `image`, `url` e `html` usam exibição fixa de `60s`
+  - `video` toca até o fim e então avança para o próximo item
+  - o overlay de controle aparece ao clicar/tocar na tela
+  - o overlay mostra `Tempo`, contador `Restante`, botão `Trocar` e botão `Início`
+  - em vídeo, o contador e o tempo exibido usam a duração real do arquivo quando disponível
   - quando há somente 1 vídeo, o player reinicia automaticamente em loop de playlist
-  - estado de `Loading`, `Success`, `Error`, com ação de recarregar e trocar código
+  - estado de `Loading`, `Success`, `Error`, com ação de voltar ao início no overlay de erro
 
 ## Launcher Icon (Android/Android TV)
 - Adaptive icon ativo em:
@@ -81,7 +83,8 @@ Regra de montagem da URL:
 Contrato de duração por item:
 - A API pode enviar `duracao` ou `duration` em segundos para cada item de `propagandas`.
 - O app converte esse valor para milissegundos internamente.
-- Valores ausentes, inválidos ou `<= 0` usam `TV_DEFAULT_DISPLAY_DURATION_SECONDS`.
+- Para `image`, `url` e `html`, o app usa `60s` fixos na interface atual.
+- Para `video`, o app usa a duração real do player; se indisponível, segue até o fim da reprodução.
 
 ## Build
 ```powershell

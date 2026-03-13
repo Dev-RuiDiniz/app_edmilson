@@ -22,6 +22,7 @@
     <string name="display_duration_default">Tempo: 60s</string>
     <string name="display_duration_fixed">Tempo: 60s</string>
     <string name="display_duration_video">Tempo: vídeo até o fim</string>
+    <string name="display_duration_video_seconds">Tempo: %1$ss</string>
     <string name="countdown_remaining">Restante: %1$ss</string>
     <string name="countdown_unavailable">Restante: --</string>
     <string name="countdown_video_live">Restante: vídeo em reprodução</string>

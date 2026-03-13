@@ -5,7 +5,7 @@
 - Sprint: 3
 
 ## Objetivo
-Garantir exibicao continua de conteudo da API em formato playlist (imagem/video/url/html), permitir duracao configuravel por item e corrigir o dimensionamento do launcher icon para Android Phone e Android TV.
+Garantir exibicao continua de conteudo da API em formato playlist (imagem/video/url/html), consolidar o controle visual do player e corrigir o dimensionamento do launcher icon para Android Phone e Android TV.
 
 ## Escopo entregue
 - Player orientado a playlist:
@@ -13,13 +13,19 @@ Garantir exibicao continua de conteudo da API em formato playlist (imagem/video/
   - ciclo continuo entre itens;
   - deduplicacao por tipo+URL, preservando ordem da API.
 - Regras de reproducao:
-  - imagem: usa `duracao`/`duration` da API em segundos, com fallback global de 30s;
-  - url/html: usam `duracao`/`duration` da API em segundos, com fallback global de 30s;
+  - imagem: usa exibicao fixa de 60s;
+  - url/html: usam exibicao fixa de 60s;
   - video: reproduz ate o fim e avanca;
   - se houver somente um video, reinicia automaticamente (loop de playlist).
+- Controles na renderizacao:
+  - overlay exibido sob clique/toque;
+  - botao `Trocar` para avancar para a proxima propaganda;
+  - botao `Inicio` para voltar para a tela de selecao de codigo;
+  - contador `Restante` para o item atual;
+  - em video, o tempo exibido acompanha a duracao real do player quando disponivel.
 - Cache atualizado:
   - persistencia de playlist completa em `SharedPreferences`;
-  - persistencia da duracao por item;
+  - persistencia da duracao por item para compatibilidade com a resposta da API;
   - retrocompatibilidade com cache antigo de item unico.
 - Launcher icon:
   - adaptive icon mantido em `mipmap-anydpi-v26`;
@@ -55,12 +61,11 @@ Resultado:
 ## Resultado funcional esperado
 - API com multiplos itens: app percorre todos em loop.
 - Sequencia imagem + video:
-  - imagem pelo tempo enviado em `duracao`/`duration` ou 30s no fallback;
+  - imagem por 60s;
   - video ate terminar;
   - proximo item automaticamente.
 - Um unico video:
   - toca inteiro;
   - reinicia automaticamente sem travar em tela de erro.
 - URL/HTML:
-  - usam a duracao por item quando a API informar;
-  - sem duracao valida, usam o fallback global configurado.
+  - usam exibicao fixa de 60s na interface atual.
