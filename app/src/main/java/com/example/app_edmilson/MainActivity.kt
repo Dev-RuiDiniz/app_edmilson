@@ -44,6 +44,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         renderRecentCodes()
+        prepareHomeState(intent)
         handleIncomingCode(intent)
         requestInitialFocus()
     }
@@ -51,7 +52,18 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        prepareHomeState(intent)
         handleIncomingCode(intent)
+    }
+
+    private fun prepareHomeState(intent: Intent?) {
+        if (intent?.getBooleanExtra(EXTRA_RESET_TO_HOME, false) != true) {
+            return
+        }
+        codeInputLayout.error = null
+        codeEditText.text?.clear()
+        intent.removeExtra(EXTRA_TV_CODE)
+        intent.removeExtra(EXTRA_RESET_TO_HOME)
     }
 
     private fun connectWithInputCode() {
@@ -68,6 +80,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleIncomingCode(intent: Intent?) {
         val rawCode = intent?.getStringExtra(EXTRA_TV_CODE) ?: return
+        intent.removeExtra(EXTRA_TV_CODE)
         val normalizedCode = TvCodeValidator.normalize(rawCode)
         if (!TvCodeValidator.isValid(normalizedCode)) {
             return
@@ -160,10 +173,17 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_TV_CODE = "extra_tv_code"
+        const val EXTRA_RESET_TO_HOME = "extra_reset_to_home"
 
         private const val PREFS_NAME = "tv_code_prefs"
         private const val KEY_RECENT_CODES = "recent_codes_json"
         private const val MAX_RECENT_CODES = 10
+
+        fun newHomeIntent(context: Context): Intent {
+            return Intent(context, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(EXTRA_RESET_TO_HOME, true)
+            }
+        }
     }
 }
-
