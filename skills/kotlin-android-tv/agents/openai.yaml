@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kotlin Android TV"
+  short_description: "Kotlin para Android e Android TV"
+  default_prompt: "Use $kotlin-android-tv para implementar ou revisar uma feature em Kotlin para Android ou Android TV."
