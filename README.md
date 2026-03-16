@@ -45,7 +45,7 @@ App Android (celular + Android TV) em Kotlin para fluxo:
   - `url` e `html` em `WebView`
   - `image` em `ImageView` (Coil)
   - `video` em `PlayerView` (ExoPlayer), com autoplay
-  - `image`, `url` e `html` usam `duracao`/`duration` da API quando disponível
+- `image`, `url` e `html` usam `duracao`/`duration`/`tempo_exibicao_segundos` da API quando disponível
   - fallback para `image`, `url` e `html`: `TV_DEFAULT_DISPLAY_DURATION_SECONDS`
   - `video` toca até o fim e então avança para o próximo item
   - o overlay de controle aparece ao clicar/tocar na tela
@@ -85,7 +85,7 @@ Regra de montagem da URL:
 - Ex.: `https://hotspot1.edmilsonti.com.br` + `api/tv/propagandas?codigo=TV2665487D&api_key=TV56beafcbe547ac8d6b4a95685efb2dc39b7b260fb645b55a`.
 
 Contrato de duração por item:
-- A API pode enviar `duracao` ou `duration` em segundos para cada item de `propagandas`.
+- A API pode enviar `duracao`, `duration` ou `tempo_exibicao_segundos` em segundos para cada item de `propagandas`.
 - O app converte esse valor para milissegundos internamente.
 - Para `image`, `url` e `html`, o app usa o valor enviado pela API quando ele for maior que zero.
 - Quando esse valor não vier, for inválido ou `<= 0`, o app usa `TV_DEFAULT_DISPLAY_DURATION_SECONDS`.

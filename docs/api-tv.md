@@ -53,10 +53,10 @@ Alternativa: enviar `X-API-Key: SUA_API_KEY` no header e manter apenas `?codigo=
 | Campo | Obrigatório | Descrição |
 | --- | --- | --- |
 | `imagem_url` / `url` / `video_url` / `html` | Sim | Conteúdo a renderizar |
-| `duracao` ou `duration` | Não | Tempo de exibição em segundos enviado pela API |
+| `duracao` / `duration` / `tempo_exibicao_segundos` | Não | Tempo de exibição em segundos enviado pela API |
 
 Regras:
-- O app usa `duracao`/`duration` para `imagem`, `url` e `html` quando o valor for numérico e maior que zero.
+- O app usa `duracao`/`duration`/`tempo_exibicao_segundos` para `imagem`, `url` e `html` quando o valor for numérico e maior que zero.
 - Se esse campo não vier, for inválido ou `<= 0`, o app usa o fallback local configurado em `TV_DEFAULT_DISPLAY_DURATION_SECONDS`.
 - Vídeos continuam reproduzindo até o fim do arquivo ou stream e só então avançam para o próximo item.
 - Quando a duração do vídeo é conhecida pelo player, o app mostra esse tempo no overlay e no contador de tempo restante.
@@ -71,7 +71,7 @@ Regras:
     {
       "id": 1,
       "imagem_url": "https://.../uploads/tv/tv_123_...jpg",
-      "duracao": 20,
+      "tempo_exibicao_segundos": 20,
       "titulo": "Promocao Especial",
       "descricao": "...",
       "ordem": 0
@@ -153,7 +153,7 @@ curl -G "https://hotspot1.edmilsonti.com.br/api/tv/registrar-exibicao" \
 2. Ao iniciar o app, ou em intervalo periódico, como a cada 5 minutos, chamar `GET /api/tv/propagandas?codigo=XXX&api_key=YYY`.
 3. Exibir as propagandas em rotativo, ordenando pelo campo `ordem`.
 4. Utilizar `imagem_url`, `url`, `video_url` ou `html`, conforme o tipo retornado.
-5. Aplicar `duracao`/`duration` para `imagem`, `url` e `html` quando a API informar valor válido.
+5. Aplicar `duracao`/`duration`/`tempo_exibicao_segundos` para `imagem`, `url` e `html` quando a API informar valor válido.
 6. Cada vez que uma propaganda for exibida, chamar `GET /api/tv/registrar-exibicao?id=ID&codigo=XXX&api_key=YYY` para atualizar o contador no painel.
 
 ## Segurança

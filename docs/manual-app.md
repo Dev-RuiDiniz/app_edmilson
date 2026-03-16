@@ -32,7 +32,7 @@ Este manual explica como instalar, configurar e operar o app de TV do cliente.
 
 ## Funcionamento da tela de exibição
 - O conteúdo roda em playlist contínua.
-- O tempo de `imagem`, `url` e `html` vem da API pelos campos `duracao` ou `duration`.
+- O tempo de `imagem`, `url` e `html` vem da API pelos campos `duracao`, `duration` ou `tempo_exibicao_segundos`.
 - Se a API não informar tempo válido, o app usa o valor padrão configurado no projeto.
 - `Video` roda até o final do arquivo.
 
@@ -65,7 +65,7 @@ Este manual explica como instalar, configurar e operar o app de TV do cliente.
 - Código TV inválido:
   - confirme se começa com `TV` e tem o formato esperado.
 - Propaganda sem trocar:
-  - verifique se a API retornou `duracao`/`duration`.
+  - verifique se a API retornou `duracao`, `duration` ou `tempo_exibicao_segundos`.
 - Contador do painel não aparece correto:
   - confirme se o item é `video` com duração detectável ou se a API está enviando a duração para conteúdos não-vídeo.
 

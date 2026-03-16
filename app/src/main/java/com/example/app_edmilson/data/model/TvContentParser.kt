@@ -70,8 +70,17 @@ object TvContentParser {
         val media = item.getObject("midia", "media")
         val impressionId = item.readLong("id")
             ?: media?.readLong("id")
-        val displayDurationMs = item.readDurationMs("duration", "duracao")
-            ?: media?.readDurationMs("duration", "duracao")
+        val displayDurationMs = item.readDurationMs(
+            "duration",
+            "duracao",
+            "tempo_exibicao_segundos",
+            "tempoExibicaoSegundos"
+        ) ?: media?.readDurationMs(
+            "duration",
+            "duracao",
+            "tempo_exibicao_segundos",
+            "tempoExibicaoSegundos"
+        )
 
         val code = item.readString("code", "codigo")
             .ifBlank { media?.readString("code", "codigo").orEmpty() }

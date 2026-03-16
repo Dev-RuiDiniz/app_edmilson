@@ -13,8 +13,8 @@ Garantir exibicao continua de conteudo da API em formato playlist (imagem/video/
   - ciclo continuo entre itens;
   - deduplicacao por tipo+URL, preservando ordem da API.
 - Regras de reproducao:
-  - imagem: usa `duracao`/`duration` da API quando disponivel;
-  - url/html: usam `duracao`/`duration` da API quando disponivel;
+  - imagem: usa `duracao`/`duration`/`tempo_exibicao_segundos` da API quando disponivel;
+  - url/html: usam `duracao`/`duration`/`tempo_exibicao_segundos` da API quando disponivel;
   - sem duracao valida para imagem/url/html, usa fallback global configurado;
   - video: reproduz ate o fim e avanca;
   - se houver somente um video, reinicia automaticamente (loop de playlist).
@@ -65,7 +65,7 @@ Resultado:
 ## Resultado funcional esperado
 - API com multiplos itens: app percorre todos em loop.
 - Sequencia imagem + video:
-  - imagem pelo tempo enviado em `duracao`/`duration`, ou fallback global;
+  - imagem pelo tempo enviado em `duracao`/`duration`/`tempo_exibicao_segundos`, ou fallback global;
   - video ate terminar;
   - proximo item automaticamente.
 - Um unico video:

@@ -265,4 +265,37 @@ class TvContentParserTest {
         assertTrue(resolved.contents[1] is TvRenderContent.Url)
         assertNull((resolved.contents[1] as TvRenderContent.Url).displayDurationMs)
     }
+
+    @Test
+    fun `parse tempo_exibicao_segundos per propaganda item`() {
+        val json = """
+            {
+              "success": true,
+              "codigo": "TV26654B7D",
+              "propagandas": [
+                {
+                  "id": 2,
+                  "imagem_url": "https://hotspot1.edmilsonti.com.br/uploads/tv/tv_10_1772804450_5617.jpg",
+                  "tipo_midia": "imagem",
+                  "tempo_exibicao_segundos": 10
+                },
+                {
+                  "id": 3,
+                  "imagem_url": "https://hotspot1.edmilsonti.com.br/uploads/tv/tv_10_1772805225_1360.jpg",
+                  "tipo_midia": "imagem",
+                  "tempo_exibicao_segundos": 15
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val parsed = TvContentParser.parse(JsonParser.parseString(json), requestedCode = "TV26654B7D")
+        val resolved = checkNotNull(parsed)
+
+        assertEquals(2, resolved.contents.size)
+        assertEquals(10_000L, (resolved.contents[0] as TvRenderContent.Image).displayDurationMs)
+        assertEquals(15_000L, (resolved.contents[1] as TvRenderContent.Image).displayDurationMs)
+        assertEquals(2L, (resolved.contents[0] as TvRenderContent.Image).impressionId)
+        assertEquals(3L, (resolved.contents[1] as TvRenderContent.Image).impressionId)
+    }
 }
