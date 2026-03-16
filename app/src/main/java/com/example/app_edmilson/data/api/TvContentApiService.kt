@@ -8,4 +8,7 @@ import retrofit2.http.Url
 interface TvContentApiService {
     @GET
     suspend fun getTvContent(@Url endpoint: String): Response<JsonElement>
+
+    @GET
+    suspend fun registerDisplay(@Url endpoint: String): Response<JsonElement>
 }

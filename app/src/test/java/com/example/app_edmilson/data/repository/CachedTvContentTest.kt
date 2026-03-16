@@ -46,7 +46,8 @@ class CachedTvContentTest {
                 CachedTvContentItem(
                     type = "video",
                     value = "https://cdn.exemplo.com/video.mp4",
-                    displayDurationMs = 90_000L
+                    displayDurationMs = 90_000L,
+                    impressionId = 77L
                 )
             )
         ).toResolved()
@@ -56,6 +57,7 @@ class CachedTvContentTest {
             90_000L,
             (resolved.content as TvRenderContent.Video).displayDurationMs
         )
+        assertEquals(77L, (resolved.content as TvRenderContent.Video).impressionId)
         assertNull((resolved.content as TvRenderContent.Video).displayDurationMs?.takeIf { it <= 0 })
     }
 }

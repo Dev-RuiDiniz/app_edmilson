@@ -73,6 +73,32 @@ class TvContentRepository(
         }
     }
 
+    suspend fun registerDisplay(rawCode: String, content: TvRenderContent): Result<Unit> {
+        val impressionId = content.impressionId ?: return Result.success(Unit)
+        val code = TvCodeValidator.normalize(rawCode)
+        val endpoint = resolveRegisterDisplayEndpoint(code, impressionId)
+        val fullUrl = buildApiUrl(endpoint)
+
+        return runCatching {
+            Log.d(TAG, "Registrando exibicao: metodo=GET endpoint=$endpoint url=$fullUrl")
+            val response = apiService.registerDisplay(fullUrl)
+            if (!response.isSuccessful) {
+                val errorPayload = response.errorBody()?.string().orEmpty().trim()
+                val details = if (errorPayload.isBlank()) "" else " - $errorPayload"
+                throw IllegalStateException(
+                    "Falha ao registrar exibicao: status ${response.code()} em $fullUrl$details"
+                )
+            }
+
+            val body = response.body()
+            if (body != null && body.isApiFailure()) {
+                val apiMessage = body.apiErrorMessage()
+                    .ifBlank { "Resposta inválida ao registrar exibição" }
+                throw IllegalStateException(apiMessage)
+            }
+        }
+    }
+
     private fun resolveEndpoint(code: String): String {
         val encodedCode = Uri.encode(code)
         val template = BuildConfig.API_TV_CONTENT_PATH_TEMPLATE.trim()
@@ -80,6 +106,18 @@ class TvContentRepository(
             template.contains("%s") -> template.format(encodedCode)
             template.contains("{code}") -> template.replace("{code}", encodedCode)
             else -> "${template.trimEnd('/')}/$encodedCode"
+        }
+    }
+
+    private fun resolveRegisterDisplayEndpoint(code: String, impressionId: Long): String {
+        val encodedCode = Uri.encode(code)
+        val encodedId = Uri.encode(impressionId.toString())
+        val template = BuildConfig.API_TV_REGISTER_DISPLAY_PATH_TEMPLATE.trim()
+        return when {
+            template.contains("{id}") || template.contains("{code}") -> template
+                .replace("{id}", encodedId)
+                .replace("{code}", encodedCode)
+            else -> template
         }
     }
 
@@ -212,16 +250,36 @@ internal data class CachedTvContent(
             val cacheItems = content.contents.map { payload ->
                 when (payload) {
                     is TvRenderContent.Url -> {
-                        CachedTvContentItem("url", payload.value, payload.displayDurationMs)
+                        CachedTvContentItem(
+                            "url",
+                            payload.value,
+                            payload.displayDurationMs,
+                            payload.impressionId
+                        )
                     }
                     is TvRenderContent.Html -> {
-                        CachedTvContentItem("html", payload.value, payload.displayDurationMs)
+                        CachedTvContentItem(
+                            "html",
+                            payload.value,
+                            payload.displayDurationMs,
+                            payload.impressionId
+                        )
                     }
                     is TvRenderContent.Image -> {
-                        CachedTvContentItem("image", payload.value, payload.displayDurationMs)
+                        CachedTvContentItem(
+                            "image",
+                            payload.value,
+                            payload.displayDurationMs,
+                            payload.impressionId
+                        )
                     }
                     is TvRenderContent.Video -> {
-                        CachedTvContentItem("video", payload.value, payload.displayDurationMs)
+                        CachedTvContentItem(
+                            "video",
+                            payload.value,
+                            payload.displayDurationMs,
+                            payload.impressionId
+                        )
                     }
                 }
             }
@@ -236,14 +294,15 @@ internal data class CachedTvContent(
 internal data class CachedTvContentItem(
     val type: String,
     val value: String,
-    val displayDurationMs: Long? = null
+    val displayDurationMs: Long? = null,
+    val impressionId: Long? = null
 ) {
     fun toRenderContent(): TvRenderContent? {
         return when (type) {
-            "url" -> TvRenderContent.Url(value, displayDurationMs)
-            "html" -> TvRenderContent.Html(value, displayDurationMs)
-            "image" -> TvRenderContent.Image(value, displayDurationMs)
-            "video" -> TvRenderContent.Video(value, displayDurationMs)
+            "url" -> TvRenderContent.Url(value, displayDurationMs, impressionId)
+            "html" -> TvRenderContent.Html(value, displayDurationMs, impressionId)
+            "image" -> TvRenderContent.Image(value, displayDurationMs, impressionId)
+            "video" -> TvRenderContent.Video(value, displayDurationMs, impressionId)
             else -> null
         }
     }

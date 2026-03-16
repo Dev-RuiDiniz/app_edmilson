@@ -90,6 +90,16 @@ android {
             )
         )
         buildConfigField(
+            "String",
+            "API_TV_REGISTER_DISPLAY_PATH_TEMPLATE",
+            asBuildConfigString(
+                readStringConfig(
+                    "API_TV_REGISTER_DISPLAY_PATH_TEMPLATE",
+                    "api/tv/registrar-exibicao?id={id}&codigo={code}&api_key=TV56beafcbe547ac8d6b4a95685efb2dc39b7b260fb645b55a"
+                )
+            )
+        )
+        buildConfigField(
             "long",
             "TV_DEFAULT_DISPLAY_DURATION_SECONDS",
             "${readPositiveLongConfig("TV_DEFAULT_DISPLAY_DURATION_SECONDS", 30)}L"

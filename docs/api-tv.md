@@ -56,7 +56,8 @@ Alternativa: enviar `X-API-Key: SUA_API_KEY` no header e manter apenas `?codigo=
 | `duracao` ou `duration` | Não | Tempo de exibição em segundos enviado pela API |
 
 Regras:
-- Na interface atual do app, `imagem`, `url` e `html` usam exibição fixa de `60s`.
+- O app usa `duracao`/`duration` para `imagem`, `url` e `html` quando o valor for numérico e maior que zero.
+- Se esse campo não vier, for inválido ou `<= 0`, o app usa o fallback local configurado em `TV_DEFAULT_DISPLAY_DURATION_SECONDS`.
 - Vídeos continuam reproduzindo até o fim do arquivo ou stream e só então avançam para o próximo item.
 - Quando a duração do vídeo é conhecida pelo player, o app mostra esse tempo no overlay e no contador de tempo restante.
 
@@ -101,9 +102,7 @@ curl -G "https://hotspot1.edmilsonti.com.br/api/tv/propagandas" \
 
 ## 2. Registrar exibição
 
-Uso: quando o app de TV exibir uma propaganda na tela, pode chamar este endpoint para incrementar o contador `Quantas vezes passou na TV` no painel do cliente.
-
-Se o app não enviar esta chamada, o contador permanece em `0`.
+Uso: quando o app de TV exibir uma propaganda na tela, ele chama este endpoint para incrementar o contador `Quantas vezes passou na TV` no painel do cliente.
 
 ### Endpoint
 
@@ -133,6 +132,12 @@ GET /api/tv/registrar-exibicao
 
 Observação: o `id` precisa pertencer a uma propaganda vinculada ao Mikrotik identificado pelo `codigo`.
 
+Regra de uso no app:
+- `imagem`: envia o registro após o carregamento bem-sucedido.
+- `url` e `html`: envia o registro após o `WebView` concluir o carregamento.
+- `video`: envia o registro quando o player entra em estado pronto para reprodução.
+- O envio ocorre uma vez por exibição do item na playlist.
+
 ### Exemplo cURL
 
 ```bash
@@ -148,8 +153,8 @@ curl -G "https://hotspot1.edmilsonti.com.br/api/tv/registrar-exibicao" \
 2. Ao iniciar o app, ou em intervalo periódico, como a cada 5 minutos, chamar `GET /api/tv/propagandas?codigo=XXX&api_key=YYY`.
 3. Exibir as propagandas em rotativo, ordenando pelo campo `ordem`.
 4. Utilizar `imagem_url`, `url`, `video_url` ou `html`, conforme o tipo retornado.
-5. Exibir `imagem`, `url` e `html` por `60s` na interface atual do app.
-6. Opcionalmente, cada vez que uma propaganda for exibida, chamar `GET /api/tv/registrar-exibicao?id=ID&codigo=XXX&api_key=YYY` para atualizar o contador no painel.
+5. Aplicar `duracao`/`duration` para `imagem`, `url` e `html` quando a API informar valor válido.
+6. Cada vez que uma propaganda for exibida, chamar `GET /api/tv/registrar-exibicao?id=ID&codigo=XXX&api_key=YYY` para atualizar o contador no painel.
 
 ## Segurança
 

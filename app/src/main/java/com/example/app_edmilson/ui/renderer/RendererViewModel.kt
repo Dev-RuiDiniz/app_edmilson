@@ -3,6 +3,8 @@ package com.example.app_edmilson.ui.renderer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import android.util.Log
+import com.example.app_edmilson.data.model.TvRenderContent
 import com.example.app_edmilson.data.repository.TvContentRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,6 +35,20 @@ class RendererViewModel(
     fun reload() {
         currentCode?.let(::load)
     }
+
+    fun reportDisplay(content: TvRenderContent) {
+        val code = currentCode ?: return
+        viewModelScope.launch {
+            repository.registerDisplay(code, content)
+                .onFailure { error ->
+                    Log.w(TAG, "Falha ao registrar exibicao da propaganda", error)
+                }
+        }
+    }
+
+    companion object {
+        private const val TAG = "RendererViewModel"
+    }
 }
 
 class RendererViewModelFactory(
@@ -46,4 +62,3 @@ class RendererViewModelFactory(
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
 }
-

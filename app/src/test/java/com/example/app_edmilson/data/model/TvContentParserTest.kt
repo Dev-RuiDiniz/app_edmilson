@@ -185,6 +185,7 @@ class TvContentParserTest {
             "https://hotspot1.edmilsonti.com.br/uploads/tv/tv_18_1772147471_2097.jpg",
             (parsed?.content as TvRenderContent.Image).value
         )
+        assertEquals(1L, (parsed.content as TvRenderContent.Image).impressionId)
     }
 
     @Test

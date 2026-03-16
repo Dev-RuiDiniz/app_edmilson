@@ -31,9 +31,10 @@ App Android (celular + Android TV) em Kotlin para fluxo:
 - Consulta API:
   - usa `Retrofit + OkHttp`
   - endpoint montado por `API_TV_CONTENT_PATH_TEMPLATE` com substituição `%s` ou `{code}`
+  - endpoint de registro montado por `API_TV_REGISTER_DISPLAY_PATH_TEMPLATE` com substituição `{id}` e `{code}`
   - código é URL-encoded antes da chamada
 - Parse de resposta:
-  - suporta resposta completa (`code`, `type`, `url/html/imageUrl`) e simples (`url`)
+  - suporta resposta completa (`id`, `code`, `type`, `url/html/imageUrl`) e simples (`url`)
   - suporta item único (`data`, `propaganda`) e lista (`propagandas`)
   - se `type` vier inconsistente (ex.: `type=url` sem `url`), aplica fallback automático para outros campos válidos
   - remove duplicados de mídia na lista final mantendo ordem de chegada da API
@@ -44,11 +45,13 @@ App Android (celular + Android TV) em Kotlin para fluxo:
   - `url` e `html` em `WebView`
   - `image` em `ImageView` (Coil)
   - `video` em `PlayerView` (ExoPlayer), com autoplay
-  - `image`, `url` e `html` usam exibição fixa de `60s`
+  - `image`, `url` e `html` usam `duracao`/`duration` da API quando disponível
+  - fallback para `image`, `url` e `html`: `TV_DEFAULT_DISPLAY_DURATION_SECONDS`
   - `video` toca até o fim e então avança para o próximo item
   - o overlay de controle aparece ao clicar/tocar na tela
   - o overlay mostra `Tempo`, contador `Restante`, botão `Trocar` e botão `Início`
   - em vídeo, o contador e o tempo exibido usam a duração real do arquivo quando disponível
+  - o app chama `/api/tv/registrar-exibicao` a cada vez que uma propaganda entra em exibição
   - quando há somente 1 vídeo, o player reinicia automaticamente em loop de playlist
   - estado de `Loading`, `Success`, `Error`, com ação de voltar ao início no overlay de erro
 
@@ -68,6 +71,7 @@ Arquivo: `app/build.gradle.kts`
 Variáveis suportadas (Gradle property ou env var):
 - `API_BASE_URL` (ex.: `https://hotspot1.edmilsonti.com.br`)
 - `API_TV_CONTENT_PATH_TEMPLATE` (default: `api/tv/propagandas?codigo={code}&api_key=TV56beafcbe547ac8d6b4a95685efb2dc39b7b260fb645b55a`)
+- `API_TV_REGISTER_DISPLAY_PATH_TEMPLATE` (default: `api/tv/registrar-exibicao?id={id}&codigo={code}&api_key=...`)
 - `TV_DEFAULT_DISPLAY_DURATION_SECONDS` (default: `30`)
 
 Exemplos de template aceitos:
@@ -83,8 +87,16 @@ Regra de montagem da URL:
 Contrato de duração por item:
 - A API pode enviar `duracao` ou `duration` em segundos para cada item de `propagandas`.
 - O app converte esse valor para milissegundos internamente.
-- Para `image`, `url` e `html`, o app usa `60s` fixos na interface atual.
+- Para `image`, `url` e `html`, o app usa o valor enviado pela API quando ele for maior que zero.
+- Quando esse valor não vier, for inválido ou `<= 0`, o app usa `TV_DEFAULT_DISPLAY_DURATION_SECONDS`.
 - Para `video`, o app usa a duração real do player; se indisponível, segue até o fim da reprodução.
+
+Contrato de registro de exibição:
+- A API deve retornar `id` para cada propaganda que precise ser contabilizada.
+- O app chama `/api/tv/registrar-exibicao` uma vez por renderização de item exibido.
+- Para `image`, o envio acontece após a imagem carregar.
+- Para `url`/`html`, o envio acontece após o `WebView` concluir o carregamento.
+- Para `video`, o envio acontece quando o player entra em `STATE_READY`.
 
 ## Build
 ```powershell
@@ -119,3 +131,5 @@ adb -s 127.0.0.1:5555 shell monkey -p com.example.app_edmilson -c android.intent
 - `docs/sprint-2.md`
 - `docs/sprint-3.md`
 - `docs/release-signing.md`
+- `docs/manual-app.md`
+- `docs/api-tv.md`

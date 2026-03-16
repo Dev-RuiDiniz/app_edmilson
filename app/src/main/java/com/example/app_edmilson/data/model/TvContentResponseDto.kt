@@ -48,27 +48,32 @@ data class TvContentItemDto(
 
 sealed class TvRenderContent(
     open val value: String,
-    open val displayDurationMs: Long? = null
+    open val displayDurationMs: Long? = null,
+    open val impressionId: Long? = null
 ) {
     data class Url(
         override val value: String,
-        override val displayDurationMs: Long? = null
-    ) : TvRenderContent(value, displayDurationMs)
+        override val displayDurationMs: Long? = null,
+        override val impressionId: Long? = null
+    ) : TvRenderContent(value, displayDurationMs, impressionId)
 
     data class Html(
         override val value: String,
-        override val displayDurationMs: Long? = null
-    ) : TvRenderContent(value, displayDurationMs)
+        override val displayDurationMs: Long? = null,
+        override val impressionId: Long? = null
+    ) : TvRenderContent(value, displayDurationMs, impressionId)
 
     data class Image(
         override val value: String,
-        override val displayDurationMs: Long? = null
-    ) : TvRenderContent(value, displayDurationMs)
+        override val displayDurationMs: Long? = null,
+        override val impressionId: Long? = null
+    ) : TvRenderContent(value, displayDurationMs, impressionId)
 
     data class Video(
         override val value: String,
-        override val displayDurationMs: Long? = null
-    ) : TvRenderContent(value, displayDurationMs)
+        override val displayDurationMs: Long? = null,
+        override val impressionId: Long? = null
+    ) : TvRenderContent(value, displayDurationMs, impressionId)
 }
 
 data class ResolvedTvContent(

@@ -69,6 +69,9 @@ class RendererActivity : AppCompatActivity() {
     private var controlsHideJob: Job? = null
     private var countdownJob: Job? = null
     private var currentRenderToken: Long = 0L
+    private var activeRenderToken: Long = -1L
+    private var activeContent: TvRenderContent? = null
+    private var lastReportedRenderToken: Long = -1L
 
     private val exoPlayerListener = object : Player.Listener {
         override fun onPlayerError(error: PlaybackException) {
@@ -76,10 +79,14 @@ class RendererActivity : AppCompatActivity() {
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState == Player.STATE_READY && activeContent is TvRenderContent.Video) {
+                reportCurrentContentIfNeeded()
+            }
             if (playbackState == Player.STATE_ENDED) {
                 moveToNextContent()
             }
         }
+
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -209,6 +216,13 @@ class RendererActivity : AppCompatActivity() {
                 return false
             }
 
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                if (isWebContentVisible) {
+                    reportCurrentContentIfNeeded()
+                }
+            }
+
             override fun onReceivedError(
                 view: WebView?,
                 request: WebResourceRequest?,
@@ -310,7 +324,11 @@ class RendererActivity : AppCompatActivity() {
         cancelScheduledAdvance()
         cancelCountdown()
         val renderToken = ++currentRenderToken
-        when (val content = playlist[currentPlaylistIndex]) {
+        val content = playlist[currentPlaylistIndex]
+        activeRenderToken = renderToken
+        activeContent = content
+        lastReportedRenderToken = -1L
+        when (content) {
             is TvRenderContent.Url -> {
                 stopVideoPlayback()
                 imageView.isVisible = false
@@ -344,6 +362,7 @@ class RendererActivity : AppCompatActivity() {
                     listener(
                         onSuccess = { _, _ ->
                             if (renderToken == currentRenderToken) {
+                                reportCurrentContentIfNeeded(renderToken, content)
                                 scheduleNextContent(content, renderToken)
                             }
                         },
@@ -366,6 +385,9 @@ class RendererActivity : AppCompatActivity() {
         cancelCountdown()
         stopVideoPlayback()
         hideControls()
+        activeContent = null
+        activeRenderToken = -1L
+        lastReportedRenderToken = -1L
         loadingOverlay.isVisible = false
         errorOverlay.isVisible = true
         errorMessage.text = message
@@ -508,12 +530,9 @@ class RendererActivity : AppCompatActivity() {
     }
 
     private fun resolveDisplayDurationMs(content: TvRenderContent): Long {
-        return when (content) {
-            is TvRenderContent.Video -> content.displayDurationMs
-                ?.takeIf { it > 0 }
-                ?: DEFAULT_DISPLAY_DURATION_MS
-            else -> FIXED_DISPLAY_DURATION_MS
-        }
+        return content.displayDurationMs
+            ?.takeIf { it > 0 }
+            ?: DEFAULT_DISPLAY_DURATION_MS
     }
 
     private fun updateControlsState() {
@@ -530,7 +549,10 @@ class RendererActivity : AppCompatActivity() {
             is TvRenderContent.Url,
             is TvRenderContent.Html,
             is TvRenderContent.Image -> {
-                displayDurationText.text = getString(R.string.display_duration_fixed)
+                displayDurationText.text = getString(
+                    R.string.display_duration_seconds,
+                    millisToSeconds(resolveDisplayDurationMs(currentContent))
+                )
             }
             null -> {
                 displayDurationText.text = getString(R.string.display_duration_default)
@@ -606,6 +628,23 @@ class RendererActivity : AppCompatActivity() {
         finish()
     }
 
+    private fun reportCurrentContentIfNeeded(
+        renderToken: Long = activeRenderToken,
+        content: TvRenderContent? = activeContent
+    ) {
+        if (content == null) {
+            return
+        }
+        if (renderToken != activeRenderToken || renderToken == -1L) {
+            return
+        }
+        if (lastReportedRenderToken == renderToken) {
+            return
+        }
+        lastReportedRenderToken = renderToken
+        viewModel.reportDisplay(content)
+    }
+
     private fun handleWebViewDpad(keyCode: Int): Boolean {
         return when (keyCode) {
             KeyEvent.KEYCODE_DPAD_UP -> webView.pageUp(false)
@@ -635,7 +674,6 @@ class RendererActivity : AppCompatActivity() {
         private const val EXTRA_TV_CODE = "extra_tv_code"
         private const val DEFAULT_DISPLAY_DURATION_MS =
             BuildConfig.TV_DEFAULT_DISPLAY_DURATION_SECONDS * 1_000L
-        private const val FIXED_DISPLAY_DURATION_MS = 60_000L
         private const val CONTROLS_AUTO_HIDE_MS = 4_000L
 
         fun newIntent(context: Context, code: String): Intent {

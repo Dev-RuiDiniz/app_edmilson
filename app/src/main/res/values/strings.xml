@@ -19,8 +19,8 @@
     <string name="video_load_error">Erro ao carregar o vídeo.</string>
     <string name="retry">Tentar novamente</string>
     <string name="swap_content_button">Trocar</string>
-    <string name="display_duration_default">Tempo: 60s</string>
-    <string name="display_duration_fixed">Tempo: 60s</string>
+    <string name="display_duration_default">Tempo: padrão</string>
+    <string name="display_duration_seconds">Tempo: %1$ss</string>
     <string name="display_duration_video">Tempo: vídeo até o fim</string>
     <string name="display_duration_video_seconds">Tempo: %1$ss</string>
     <string name="countdown_remaining">Restante: %1$ss</string>

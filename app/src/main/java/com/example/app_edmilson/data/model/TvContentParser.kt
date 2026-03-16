@@ -68,6 +68,8 @@ object TvContentParser {
 
     private fun parseItem(item: JsonObject, requestedCode: String): ResolvedTvContent? {
         val media = item.getObject("midia", "media")
+        val impressionId = item.readLong("id")
+            ?: media?.readLong("id")
         val displayDurationMs = item.readDurationMs("duration", "duracao")
             ?: media?.readDurationMs("duration", "duracao")
 
@@ -148,13 +150,16 @@ object TvContentParser {
         val content = when (type) {
             "video", "vídeo", "mp4", "m3u8", "hls", "dash", "stream" -> {
                 val video = videoUrl.ifBlank { url }
-                video.takeIf { it.isNotBlank() }?.let { TvRenderContent.Video(it, displayDurationMs) }
+                video.takeIf { it.isNotBlank() }?.let {
+                    TvRenderContent.Video(it, displayDurationMs, impressionId)
+                }
                     ?: parseWithoutExplicitType(
                         url = url,
                         html = html,
                         imageUrl = imageUrl,
                         videoUrl = videoUrl,
-                        displayDurationMs = displayDurationMs
+                        displayDurationMs = displayDurationMs,
+                        impressionId = impressionId
                     )
             }
             "url", "web" -> when {
@@ -163,30 +168,35 @@ object TvContentParser {
                     html = html,
                     imageUrl = imageUrl,
                     videoUrl = videoUrl,
-                    displayDurationMs = displayDurationMs
+                    displayDurationMs = displayDurationMs,
+                    impressionId = impressionId
                 )
-                isVideoUrl(url) -> TvRenderContent.Video(url, displayDurationMs)
-                else -> TvRenderContent.Url(url, displayDurationMs)
+                isVideoUrl(url) -> TvRenderContent.Video(url, displayDurationMs, impressionId)
+                else -> TvRenderContent.Url(url, displayDurationMs, impressionId)
             }
             "html" -> html.takeIf { it.isNotBlank() }?.let {
-                TvRenderContent.Html(it, displayDurationMs)
+                TvRenderContent.Html(it, displayDurationMs, impressionId)
             }
                 ?: parseWithoutExplicitType(
                     url = url,
                     html = html,
                     imageUrl = imageUrl,
                     videoUrl = videoUrl,
-                    displayDurationMs = displayDurationMs
+                    displayDurationMs = displayDurationMs,
+                    impressionId = impressionId
                 )
             "image", "imagem" -> {
                 val image = imageUrl.ifBlank { url }
-                image.takeIf { it.isNotBlank() }?.let { TvRenderContent.Image(it, displayDurationMs) }
+                image.takeIf { it.isNotBlank() }?.let {
+                    TvRenderContent.Image(it, displayDurationMs, impressionId)
+                }
                     ?: parseWithoutExplicitType(
                         url = url,
                         html = html,
                         imageUrl = imageUrl,
                         videoUrl = videoUrl,
-                        displayDurationMs = displayDurationMs
+                        displayDurationMs = displayDurationMs,
+                        impressionId = impressionId
                     )
             }
             else -> parseWithoutExplicitType(
@@ -194,7 +204,8 @@ object TvContentParser {
                 html = html,
                 imageUrl = imageUrl,
                 videoUrl = videoUrl,
-                displayDurationMs = displayDurationMs
+                displayDurationMs = displayDurationMs,
+                impressionId = impressionId
             )
         }
 
@@ -206,22 +217,23 @@ object TvContentParser {
         html: String,
         imageUrl: String,
         videoUrl: String,
-        displayDurationMs: Long?
+        displayDurationMs: Long?,
+        impressionId: Long?
     ): TvRenderContent? {
         if (videoUrl.isNotBlank()) {
-            return TvRenderContent.Video(videoUrl, displayDurationMs)
+            return TvRenderContent.Video(videoUrl, displayDurationMs, impressionId)
         }
         if (url.isNotBlank() && isVideoUrl(url)) {
-            return TvRenderContent.Video(url, displayDurationMs)
+            return TvRenderContent.Video(url, displayDurationMs, impressionId)
         }
         if (url.isNotBlank() && urlPattern.matches(url)) {
-            return TvRenderContent.Url(url, displayDurationMs)
+            return TvRenderContent.Url(url, displayDurationMs, impressionId)
         }
         if (html.isNotBlank()) {
-            return TvRenderContent.Html(html, displayDurationMs)
+            return TvRenderContent.Html(html, displayDurationMs, impressionId)
         }
         if (imageUrl.isNotBlank()) {
-            return TvRenderContent.Image(imageUrl, displayDurationMs)
+            return TvRenderContent.Image(imageUrl, displayDurationMs, impressionId)
         }
         return null
     }
@@ -233,6 +245,7 @@ object TvContentParser {
     }
 
     private fun contentKey(content: TvRenderContent): String {
+        content.impressionId?.let { return "id:$it" }
         return when (content) {
             is TvRenderContent.Url -> "url:${content.value.trim()}"
             is TvRenderContent.Html -> "html:${content.value.trim()}"
@@ -257,6 +270,17 @@ object TvContentParser {
             val seconds = rawValue.asLongOrNull() ?: rawValue.asStringOrNull()?.toLongOrNull()
             if (seconds != null && seconds > 0) {
                 return seconds * 1_000L
+            }
+        }
+        return null
+    }
+
+    private fun JsonObject.readLong(vararg keys: String): Long? {
+        for (key in keys) {
+            val rawValue = this[key] ?: continue
+            val parsedValue = rawValue.asLongOrNull() ?: rawValue.asStringOrNull()?.toLongOrNull()
+            if (parsedValue != null && parsedValue > 0) {
+                return parsedValue
             }
         }
         return null
