@@ -158,6 +158,55 @@ class TvContentParserTest {
     }
 
     @Test
+    fun `treat mp4 in imagem_url as video even when tipo_midia is imagem`() {
+        val json = """
+            {
+              "success": true,
+              "codigo": "TVVIDEO001",
+              "propagandas": [
+                {
+                  "id": 9,
+                  "tipo_midia": "imagem",
+                  "imagem_url": "https://cdn.exemplo.com/uploads/propaganda.mp4"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val parsed = TvContentParser.parse(JsonParser.parseString(json), requestedCode = "TVVIDEO001")
+        val resolved = checkNotNull(parsed)
+
+        assertTrue(resolved.content is TvRenderContent.Video)
+        assertEquals(
+            "https://cdn.exemplo.com/uploads/propaganda.mp4",
+            (resolved.content as TvRenderContent.Video).value
+        )
+        assertEquals(9L, (resolved.content as TvRenderContent.Video).impressionId)
+    }
+
+    @Test
+    fun `infer video from imagem_url without explicit type`() {
+        val json = """
+            {
+              "propagandas": [
+                {
+                  "imagem_url": "https://cdn.exemplo.com/uploads/spot.webm"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val parsed = TvContentParser.parse(JsonParser.parseString(json), requestedCode = "TVVIDEO002")
+        val resolved = checkNotNull(parsed)
+
+        assertTrue(resolved.content is TvRenderContent.Video)
+        assertEquals(
+            "https://cdn.exemplo.com/uploads/spot.webm",
+            (resolved.content as TvRenderContent.Video).value
+        )
+    }
+
+    @Test
     fun `parse hotspot payload using tipo_midia and imagem_url`() {
         val json = """
             {

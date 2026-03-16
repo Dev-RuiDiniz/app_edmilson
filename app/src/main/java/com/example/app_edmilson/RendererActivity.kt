@@ -17,6 +17,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -38,6 +39,7 @@ import com.example.app_edmilson.ui.renderer.RendererViewModelFactory
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 class RendererActivity : AppCompatActivity() {
 
@@ -405,7 +407,7 @@ class RendererActivity : AppCompatActivity() {
         updateControlsState()
 
         val player = getOrCreatePlayer()
-        player.setMediaItem(MediaItem.fromUri(url))
+        player.setMediaItem(createVideoMediaItem(url))
         player.prepare()
         player.playWhenReady = true
         player.play()
@@ -533,6 +535,27 @@ class RendererActivity : AppCompatActivity() {
         return content.displayDurationMs
             ?.takeIf { it > 0 }
             ?: DEFAULT_DISPLAY_DURATION_MS
+    }
+
+    private fun createVideoMediaItem(url: String): MediaItem {
+        val builder = MediaItem.Builder()
+            .setUri(url)
+        inferVideoMimeType(url)?.let { mimeType ->
+            builder.setMimeType(mimeType)
+        }
+        return builder.build()
+    }
+
+    private fun inferVideoMimeType(url: String): String? {
+        val normalizedUrl = url.substringBefore('?').substringBefore('#').lowercase(Locale.ROOT)
+        return when {
+            normalizedUrl.endsWith(".m3u8") -> MimeTypes.APPLICATION_M3U8
+            normalizedUrl.endsWith(".mpd") -> MimeTypes.APPLICATION_MPD
+            normalizedUrl.endsWith(".ism") || normalizedUrl.endsWith(".isml") -> MimeTypes.APPLICATION_SS
+            normalizedUrl.endsWith(".mp4") || normalizedUrl.endsWith(".m4v") -> MimeTypes.VIDEO_MP4
+            normalizedUrl.endsWith(".webm") -> MimeTypes.VIDEO_WEBM
+            else -> null
+        }
     }
 
     private fun updateControlsState() {

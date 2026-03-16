@@ -32,9 +32,12 @@ Este manual explica como instalar, configurar e operar o app de TV do cliente.
 
 ## Funcionamento da tela de exibição
 - O conteúdo roda em playlist contínua.
+- Cada propaganda usa seu próprio tempo de exibição.
 - O tempo de `imagem`, `url` e `html` vem da API pelos campos `duracao`, `duration` ou `tempo_exibicao_segundos`.
 - Se a API não informar tempo válido, o app usa o valor padrão configurado no projeto.
 - `Video` roda até o final do arquivo.
+- Se a API enviar uma URL de vídeo em qualquer campo de mídia, o app detecta a extensão e envia o conteúdo para o player.
+- O player está preparado para reproduzir formatos como `mp4`, `m3u8`, `mpd` e `webm`, além de outras extensões de vídeo detectadas pela URL.
 
 ## Controles na tela
 - Clique ou toque na tela para abrir o painel de controle.
@@ -66,6 +69,8 @@ Este manual explica como instalar, configurar e operar o app de TV do cliente.
   - confirme se começa com `TV` e tem o formato esperado.
 - Propaganda sem trocar:
   - verifique se a API retornou `duracao`, `duration` ou `tempo_exibicao_segundos`.
+- Vídeo não abre:
+  - confirme se a URL enviada pela API aponta para um arquivo ou stream de vídeo válido e acessível pela TV.
 - Contador do painel não aparece correto:
   - confirme se o item é `video` com duração detectável ou se a API está enviando a duração para conteúdos não-vídeo.
 
