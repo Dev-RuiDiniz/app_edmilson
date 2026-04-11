@@ -60,4 +60,19 @@ class CachedTvContentTest {
         assertEquals(77L, (resolved.content as TvRenderContent.Video).impressionId)
         assertNull((resolved.content as TvRenderContent.Video).displayDurationMs?.takeIf { it <= 0 })
     }
+
+    @Test
+    fun `invalid cache item does not restore playlist`() {
+        val restored = CachedTvContent(
+            code = "TVCACHE003",
+            items = listOf(
+                CachedTvContentItem(
+                    type = "desconhecido",
+                    value = "sem-suporte"
+                )
+            )
+        ).toResolved()
+
+        assertNull(restored)
+    }
 }

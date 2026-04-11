@@ -7,6 +7,11 @@ import org.junit.Test
 class TvCodeValidatorTest {
 
     @Test
+    fun `normalizes lowercase code with surrounding spaces`() {
+        assertTrue(TvCodeValidator.isValid("  tv2665487d  "))
+    }
+
+    @Test
     fun `accepts valid tv code`() {
         assertTrue(TvCodeValidator.isValid("TV2665487D"))
     }

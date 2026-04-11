@@ -347,4 +347,52 @@ class TvContentParserTest {
         assertEquals(2L, (resolved.contents[0] as TvRenderContent.Image).impressionId)
         assertEquals(3L, (resolved.contents[1] as TvRenderContent.Image).impressionId)
     }
+
+    @Test
+    fun `return null when payload has no renderable content`() {
+        val json = """
+            {
+              "success": true,
+              "propagandas": [
+                {
+                  "titulo": "Sem mídia"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val parsed = TvContentParser.parse(JsonParser.parseString(json), requestedCode = "TVEMPTY001")
+
+        assertNull(parsed)
+    }
+
+    @Test
+    fun `deduplicate repeated media while preserving first occurrence order`() {
+        val json = """
+            {
+              "success": true,
+              "propagandas": [
+                {
+                  "tipo_midia": "imagem",
+                  "imagem_url": "https://cdn.exemplo.com/img/banner-1.jpg"
+                },
+                {
+                  "tipo_midia": "imagem",
+                  "imagem_url": "https://cdn.exemplo.com/img/banner-1.jpg"
+                },
+                {
+                  "tipo_midia": "video",
+                  "video_url": "https://cdn.exemplo.com/video/spot.mp4"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val parsed = TvContentParser.parse(JsonParser.parseString(json), requestedCode = "TVDEDUP001")
+        val resolved = checkNotNull(parsed)
+
+        assertEquals(2, resolved.contents.size)
+        assertTrue(resolved.contents[0] is TvRenderContent.Image)
+        assertTrue(resolved.contents[1] is TvRenderContent.Video)
+    }
 }
