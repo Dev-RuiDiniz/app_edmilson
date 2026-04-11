@@ -63,11 +63,11 @@ if (runningReleaseTask && !hasReleaseSigning) {
 }
 
 android {
-    namespace = "com.example.app_edmilson"
+    namespace = "com.hotspottv"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.app_edmilson"
+        applicationId = "com.hotspottv"
         minSdk = 21
         targetSdk = 36
         versionCode = 2

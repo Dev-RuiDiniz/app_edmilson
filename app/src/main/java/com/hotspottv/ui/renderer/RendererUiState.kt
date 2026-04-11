@@ -1,6 +1,6 @@
-package com.example.app_edmilson.ui.renderer
+package com.hotspottv.ui.renderer
 
-import com.example.app_edmilson.data.model.ResolvedTvContent
+import com.hotspottv.data.model.ResolvedTvContent
 
 sealed interface RendererUiState {
     data object Loading : RendererUiState

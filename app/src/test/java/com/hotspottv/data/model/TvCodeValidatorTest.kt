@@ -1,4 +1,4 @@
-package com.example.app_edmilson.data.model
+package com.hotspottv.data.model
 
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

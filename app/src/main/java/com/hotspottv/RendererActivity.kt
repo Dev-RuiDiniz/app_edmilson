@@ -1,4 +1,4 @@
-package com.example.app_edmilson
+package com.hotspottv
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -30,12 +30,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import coil.load
-import com.example.app_edmilson.data.model.TvCodeValidator
-import com.example.app_edmilson.data.model.TvRenderContent
-import com.example.app_edmilson.data.repository.TvContentRepository
-import com.example.app_edmilson.ui.renderer.RendererUiState
-import com.example.app_edmilson.ui.renderer.RendererViewModel
-import com.example.app_edmilson.ui.renderer.RendererViewModelFactory
+import com.hotspottv.data.model.TvCodeValidator
+import com.hotspottv.data.model.TvRenderContent
+import com.hotspottv.data.repository.TvContentRepository
+import com.hotspottv.ui.renderer.RendererUiState
+import com.hotspottv.ui.renderer.RendererViewModel
+import com.hotspottv.ui.renderer.RendererViewModelFactory
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

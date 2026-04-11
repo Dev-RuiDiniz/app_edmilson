@@ -1,4 +1,4 @@
-package com.example.app_edmilson.data.api
+package com.hotspottv.data.api
 
 import com.google.gson.JsonElement
 import retrofit2.Response

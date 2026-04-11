@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.Hotspottv" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.HotSpotTV" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">#0B2CFF</item>
         <item name="colorPrimaryVariant">#081EDB</item>
         <item name="colorOnPrimary">#FFFFFF</item>
@@ -9,10 +9,8 @@
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 
-    <style name="Theme.Hotspottv.Splash" parent="Theme.Hotspottv">
+    <style name="Theme.HotSpotTV.Splash" parent="Theme.HotSpotTV">
         <item name="android:windowBackground">@drawable/splash_background</item>
     </style>
-
-    <style name="Theme.AppEdmilson" parent="Theme.Hotspottv" />
 
 </resources>

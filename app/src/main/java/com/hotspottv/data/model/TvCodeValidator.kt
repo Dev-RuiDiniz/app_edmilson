@@ -1,4 +1,4 @@
-package com.example.app_edmilson.data.model
+package com.hotspottv.data.model
 
 object TvCodeValidator {
     fun normalize(rawCode: String): String = rawCode.trim().uppercase()

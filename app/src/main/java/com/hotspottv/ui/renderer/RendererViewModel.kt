@@ -1,11 +1,11 @@
-package com.example.app_edmilson.ui.renderer
+package com.hotspottv.ui.renderer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import android.util.Log
-import com.example.app_edmilson.data.model.TvRenderContent
-import com.example.app_edmilson.data.repository.TvContentRepository
+import com.hotspottv.data.model.TvRenderContent
+import com.hotspottv.data.repository.TvContentRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

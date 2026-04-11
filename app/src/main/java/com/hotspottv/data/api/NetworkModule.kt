@@ -1,6 +1,6 @@
-package com.example.app_edmilson.data.api
+package com.hotspottv.data.api
 
-import com.example.app_edmilson.BuildConfig
+import com.hotspottv.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit

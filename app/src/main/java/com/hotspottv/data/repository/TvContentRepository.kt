@@ -1,15 +1,15 @@
-package com.example.app_edmilson.data.repository
+package com.hotspottv.data.repository
 
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import com.example.app_edmilson.BuildConfig
-import com.example.app_edmilson.data.api.NetworkModule
-import com.example.app_edmilson.data.api.TvContentApiService
-import com.example.app_edmilson.data.model.ResolvedTvContent
-import com.example.app_edmilson.data.model.TvCodeValidator
-import com.example.app_edmilson.data.model.TvContentParser
-import com.example.app_edmilson.data.model.TvRenderContent
+import com.hotspottv.BuildConfig
+import com.hotspottv.data.api.NetworkModule
+import com.hotspottv.data.api.TvContentApiService
+import com.hotspottv.data.model.ResolvedTvContent
+import com.hotspottv.data.model.TvCodeValidator
+import com.hotspottv.data.model.TvContentParser
+import com.hotspottv.data.model.TvRenderContent
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject

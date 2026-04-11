@@ -1,4 +1,4 @@
-package com.example.app_edmilson
+package com.hotspottv
 
 import android.content.Intent
 import android.os.Bundle

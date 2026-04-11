@@ -1,4 +1,4 @@
-package com.example.app_edmilson
+package com.hotspottv
 
 import android.app.UiModeManager
 import android.content.Context
@@ -10,7 +10,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
-import com.example.app_edmilson.data.model.TvCodeValidator
+import com.hotspottv.data.model.TvCodeValidator
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputLayout
 import org.json.JSONArray

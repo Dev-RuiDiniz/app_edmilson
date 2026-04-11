@@ -1,7 +1,7 @@
-package com.example.app_edmilson.data.repository
+package com.hotspottv.data.repository
 
-import com.example.app_edmilson.data.model.ResolvedTvContent
-import com.example.app_edmilson.data.model.TvRenderContent
+import com.hotspottv.data.model.ResolvedTvContent
+import com.hotspottv.data.model.TvRenderContent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull

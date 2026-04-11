@@ -18,12 +18,12 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Hotspottv">
+        android:theme="@style/Theme.HotSpotTV">
         <activity
             android:name=".SplashActivity"
             android:banner="@drawable/banner_tv"
             android:exported="true"
-            android:theme="@style/Theme.Hotspottv.Splash">
+            android:theme="@style/Theme.HotSpotTV.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -39,12 +39,12 @@
             android:name=".MainActivity"
             android:banner="@drawable/banner_tv"
             android:exported="false"
-            android:theme="@style/Theme.Hotspottv" />
+            android:theme="@style/Theme.HotSpotTV" />
 
         <activity
             android:name=".RendererActivity"
             android:exported="false"
-            android:theme="@style/Theme.Hotspottv" />
+            android:theme="@style/Theme.HotSpotTV" />
     </application>
 
 </manifest>

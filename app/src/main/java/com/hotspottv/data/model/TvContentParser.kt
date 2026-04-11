@@ -1,4 +1,4 @@
-package com.example.app_edmilson.data.model
+package com.hotspottv.data.model
 
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Hotspottv</string>
-    <string name="splash_logo_content_desc">Logo Hotspottv</string>
+    <string name="app_name">HotSpotTV</string>
+    <string name="splash_logo_content_desc">Logo HotSpotTV</string>
     <string name="tv_code_screen_title">Conectar Código TV</string>
     <string name="tv_code_screen_subtitle">Digite ou selecione um código para carregar o conteúdo.</string>
     <string name="tv_code_hint">Ex.: TV2665487D</string>
