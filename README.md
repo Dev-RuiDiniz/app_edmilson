@@ -1,4 +1,4 @@
-# app_edmilson
+# HotSpotTV
 
 App Android (celular + Android TV) em Kotlin para fluxo:
 
@@ -102,10 +102,14 @@ Contrato de registro de exibição:
 ## Build
 ```powershell
 .\gradlew.bat testDebugUnitTest assembleDebug
+.\gradlew.bat assembleRelease
 ```
 
 APK debug:
 - `app/build/outputs/apk/debug/app-debug.apk`
+
+APK release:
+- `app/build/outputs/apk/release/app-release.apk`
 
 ## Teste no BlueStacks
 Com BlueStacks aberto:
@@ -113,7 +117,7 @@ Com BlueStacks aberto:
 ```powershell
 adb connect 127.0.0.1:5555
 adb -s 127.0.0.1:5555 install -r app\build\outputs\apk\debug\app-debug.apk
-adb -s 127.0.0.1:5555 shell monkey -p com.example.app_edmilson -c android.intent.category.LAUNCHER 1
+adb -s 127.0.0.1:5555 shell monkey -p com.hotspottv -c android.intent.category.LAUNCHER 1
 ```
 
 ## Testes
@@ -122,9 +126,13 @@ adb -s 127.0.0.1:5555 shell monkey -p com.example.app_edmilson -c android.intent
   - fallback de parse quando `type` não casa com o payload
   - montagem de playlist com múltiplas propagandas em ordem
   - validação de código TV
+- Teste instrumentado mínimo:
+  - abertura da `MainActivity`
+  - navegação por código válido até a `RendererActivity`
 - Executar:
 ```powershell
 .\gradlew.bat testDebugUnitTest
+.\gradlew.bat assembleDebugAndroidTest
 ```
 
 ## Documentação
@@ -133,5 +141,8 @@ adb -s 127.0.0.1:5555 shell monkey -p com.example.app_edmilson -c android.intent
 - `docs/sprint-3.md`
 - `docs/release-signing.md`
 - `docs/manual-app.md`
+- `docs/installation-guide.md`
+- `docs/client-delivery.md`
+- `docs/validation-matrix.md`
 - `docs/api-tv.md`
 - `docs/device-compatibility.md`

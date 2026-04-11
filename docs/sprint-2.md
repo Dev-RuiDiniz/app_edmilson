@@ -56,7 +56,7 @@ Arquivo: `app/build.gradle.kts`
   - `HD-Player.exe --cmd launchApp`
 
 ## Arquivos principais alterados
-- `app/src/main/java/com/example/app_edmilson/MainActivity.kt`
+- `app/src/main/java/com/hotspottv/MainActivity.kt`
 - `app/src/main/res/layout/activity_main.xml`
 - `app/src/main/res/values/strings.xml`
 - `app/build.gradle.kts`

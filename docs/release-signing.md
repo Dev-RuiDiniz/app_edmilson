@@ -1,4 +1,4 @@
-# Release signing e publicação
+# Release signing e publicação do HotSpotTV
 
 ## Objetivo
 Padronizar a geração de artefatos de produção assinados para distribuição no Google Play.
@@ -13,6 +13,10 @@ Padronizar a geração de artefatos de produção assinados para distribuição 
 `app/build.gradle.kts` aceita assinatura de release por:
 - arquivo `keystore.properties` na raiz do projeto
 - variáveis de ambiente `RELEASE_*`
+
+Recomendação para operação local:
+- manter a keystore definitiva fora do Git, por exemplo em `C:/Users/<usuario>/Keys/HotSpotTV/`
+- manter `keystore.properties` apenas na máquina de build
 
 Campos obrigatórios:
 - `RELEASE_STORE_FILE`
@@ -31,6 +35,9 @@ Sem esses campos, tarefas `Release` e `bundle` falham propositalmente.
 .\gradlew.bat clean bundleRelease
 .\gradlew.bat assembleRelease
 ```
+
+## Nome do artefato para entrega
+- Após gerar o release, renomear ou copiar o APK final para `HotSpotTV-release.apk` no pacote do cliente.
 
 ## Checklist de publicação
 1. Confirmar endpoints de produção em:

@@ -49,7 +49,7 @@ buildConfigField("String", "WEB_URL", "\"https://hotspot1.edmilsonti.com.br/\"")
 ```
 
 ## Arquivos principais
-- `app/src/main/java/com/example/app_edmilson/MainActivity.kt`
+- `app/src/main/java/com/hotspottv/MainActivity.kt`
 - `app/src/main/res/layout/activity_main.xml`
 - `app/src/main/AndroidManifest.xml`
 - `app/build.gradle.kts`

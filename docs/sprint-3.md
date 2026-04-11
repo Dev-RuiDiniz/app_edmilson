@@ -38,12 +38,12 @@ Garantir exibicao continua de conteudo da API em formato playlist (imagem/video/
   - icones legacy (`mipmap-*`) regenerados com margem central para evitar corte/compressao.
 
 ## Arquivos principais alterados
-- `app/src/main/java/com/example/app_edmilson/RendererActivity.kt`
-- `app/src/main/java/com/example/app_edmilson/data/model/TvContentParser.kt`
-- `app/src/main/java/com/example/app_edmilson/data/model/TvContentResponseDto.kt`
-- `app/src/main/java/com/example/app_edmilson/data/repository/TvContentRepository.kt`
-- `app/src/test/java/com/example/app_edmilson/data/model/TvContentParserTest.kt`
-- `app/src/test/java/com/example/app_edmilson/data/repository/CachedTvContentTest.kt`
+- `app/src/main/java/com/hotspottv/RendererActivity.kt`
+- `app/src/main/java/com/hotspottv/data/model/TvContentParser.kt`
+- `app/src/main/java/com/hotspottv/data/model/TvContentResponseDto.kt`
+- `app/src/main/java/com/hotspottv/data/repository/TvContentRepository.kt`
+- `app/src/test/java/com/hotspottv/data/model/TvContentParserTest.kt`
+- `app/src/test/java/com/hotspottv/data/repository/CachedTvContentTest.kt`
 - `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`
 - `app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml`
 - `app/src/main/res/drawable/ic_launcher_foreground.xml`

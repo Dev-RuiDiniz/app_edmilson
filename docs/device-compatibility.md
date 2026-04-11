@@ -1,4 +1,4 @@
-# Compatibilidade de dispositivos
+# Compatibilidade de dispositivos do HotSpotTV
 
 ## Objetivo
 Registrar o ajuste de compatibilidade de instalação do app em Android TV, TV Box e Fire TV Stick.
@@ -31,3 +31,13 @@ Registrar o ajuste de compatibilidade de instalação do app em Android TV, TV B
 1. Testar instalação manual em pelo menos um TV Box e um Fire TV Stick.
 2. Capturar o retorno de `adb install -r <apk>` nos casos de falha.
 3. Confirmar abertura do app, digitação do código e renderização de `url`, `html`, `image` e `video`.
+
+## Matriz de validação desta entrega
+- Build debug: validado localmente
+- Build release assinado: validado localmente
+- Testes unitários: validados localmente
+- Testes instrumentados: pacote compilado localmente
+- TV Box do cliente: pendente de homologação em campo
+- Fire TV Stick: pendente de homologação em campo
+- Android TV homologada: pendente de homologação em campo
+- Telefone Android: pendente de homologação em campo

@@ -1,4 +1,4 @@
-# Manual do App
+# Manual do HotSpotTV
 
 ## Objetivo
 Este manual explica como instalar, configurar e operar o app de TV do cliente.
@@ -19,7 +19,7 @@ Este manual explica como instalar, configurar e operar o app de TV do cliente.
   - `/api/tv/registrar-exibicao`
 
 ## Instalação do APK
-1. Envie o APK para o dispositivo ou emulador.
+1. Envie o APK release do HotSpotTV para o dispositivo.
 2. Abra o arquivo APK.
 3. Permita a instalação de fontes externas, se o Android solicitar.
 4. Conclua a instalação.
@@ -82,5 +82,5 @@ Este manual explica como instalar, configurar e operar o app de TV do cliente.
   - confirme se o item é `video` com duração detectável ou se a API está enviando a duração para conteúdos não-vídeo.
 
 ## Artefato para envio ao cliente
-- APK debug atual do projeto:
-  - `app/build/outputs/apk/debug/app-debug.apk`
+- APK release assinado:
+  - `app/build/outputs/apk/release/app-release.apk`

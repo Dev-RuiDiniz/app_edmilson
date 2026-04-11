@@ -1,4 +1,4 @@
-# Documentação da API TV
+# Documentação da API TV do HotSpotTV
 
 ## Visão geral
 
