@@ -8,9 +8,12 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.graphics.Rect
 import android.view.View
+import android.net.http.SslError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceError
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
+import android.webkit.SslErrorHandler
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
@@ -70,18 +73,21 @@ class RendererActivity : AppCompatActivity() {
     private var contentAdvanceJob: Job? = null
     private var controlsHideJob: Job? = null
     private var countdownJob: Job? = null
+    private var webLoadTimeoutJob: Job? = null
     private var currentRenderToken: Long = 0L
     private var activeRenderToken: Long = -1L
     private var activeContent: TvRenderContent? = null
     private var lastReportedRenderToken: Long = -1L
+    private val failedContentIndexes = linkedSetOf<Int>()
 
     private val exoPlayerListener = object : Player.Listener {
         override fun onPlayerError(error: PlaybackException) {
-            showError(getString(R.string.video_load_error))
+            handleContentFailure(getString(R.string.video_load_error))
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
             if (playbackState == Player.STATE_READY && activeContent is TvRenderContent.Video) {
+                markCurrentContentHealthy()
                 reportCurrentContentIfNeeded()
             }
             if (playbackState == Player.STATE_ENDED) {
@@ -159,6 +165,7 @@ class RendererActivity : AppCompatActivity() {
         cancelScheduledAdvance()
         cancelControlsAutoHide()
         cancelCountdown()
+        cancelWebLoadTimeout()
         if (this::playerView.isInitialized) {
             releasePlayer()
         }
@@ -221,6 +228,8 @@ class RendererActivity : AppCompatActivity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 if (isWebContentVisible) {
+                    cancelWebLoadTimeout()
+                    markCurrentContentHealthy()
                     reportCurrentContentIfNeeded()
                 }
             }
@@ -231,8 +240,28 @@ class RendererActivity : AppCompatActivity() {
                 error: WebResourceError?
             ) {
                 if (request?.isForMainFrame == true) {
-                    showError(getString(R.string.webview_load_error))
+                    handleContentFailure(getString(R.string.webview_load_error))
                 }
+            }
+
+            override fun onReceivedHttpError(
+                view: WebView?,
+                request: WebResourceRequest?,
+                errorResponse: WebResourceResponse?
+            ) {
+                super.onReceivedHttpError(view, request, errorResponse)
+                if (request?.isForMainFrame == true) {
+                    handleContentFailure(getString(R.string.webview_load_error))
+                }
+            }
+
+            override fun onReceivedSslError(
+                view: WebView?,
+                handler: SslErrorHandler?,
+                error: SslError?
+            ) {
+                handler?.cancel()
+                handleContentFailure(getString(R.string.webview_load_error))
             }
         }
 
@@ -294,10 +323,12 @@ class RendererActivity : AppCompatActivity() {
     private fun showLoading() {
         cancelScheduledAdvance()
         cancelCountdown()
+        cancelWebLoadTimeout()
         hideControls()
         loadingOverlay.isVisible = true
         errorOverlay.isVisible = false
         sourceHintText.isVisible = false
+        failedContentIndexes.clear()
         stopVideoPlayback()
     }
 
@@ -308,6 +339,7 @@ class RendererActivity : AppCompatActivity() {
         isWebContentVisible = false
         playlist = state.content.contents
         currentPlaylistIndex = 0
+        failedContentIndexes.clear()
         hideControls()
         updateControlsState()
 
@@ -325,6 +357,7 @@ class RendererActivity : AppCompatActivity() {
         }
         cancelScheduledAdvance()
         cancelCountdown()
+        cancelWebLoadTimeout()
         val renderToken = ++currentRenderToken
         val content = playlist[currentPlaylistIndex]
         activeRenderToken = renderToken
@@ -332,19 +365,29 @@ class RendererActivity : AppCompatActivity() {
         lastReportedRenderToken = -1L
         when (content) {
             is TvRenderContent.Url -> {
+                if (content.value.isBlank()) {
+                    handleContentFailure(getString(R.string.webview_load_error))
+                    return
+                }
                 stopVideoPlayback()
                 imageView.isVisible = false
                 webView.isVisible = true
                 isWebContentVisible = true
+                startWebLoadTimeout(renderToken)
                 webView.loadUrl(content.value)
                 webView.requestFocus()
                 scheduleNextContent(content, renderToken)
             }
             is TvRenderContent.Html -> {
+                if (content.value.isBlank()) {
+                    handleContentFailure(getString(R.string.webview_load_error))
+                    return
+                }
                 stopVideoPlayback()
                 imageView.isVisible = false
                 webView.isVisible = true
                 isWebContentVisible = true
+                startWebLoadTimeout(renderToken)
                 webView.loadDataWithBaseURL(
                     BuildConfig.API_BASE_URL,
                     content.value,
@@ -356,6 +399,10 @@ class RendererActivity : AppCompatActivity() {
                 scheduleNextContent(content, renderToken)
             }
             is TvRenderContent.Image -> {
+                if (content.value.isBlank()) {
+                    handleContentFailure(getString(R.string.image_load_error))
+                    return
+                }
                 stopVideoPlayback()
                 webView.isVisible = false
                 imageView.isVisible = true
@@ -364,19 +411,24 @@ class RendererActivity : AppCompatActivity() {
                     listener(
                         onSuccess = { _, _ ->
                             if (renderToken == currentRenderToken) {
+                                markCurrentContentHealthy()
                                 reportCurrentContentIfNeeded(renderToken, content)
                                 scheduleNextContent(content, renderToken)
                             }
                         },
                         onError = { _, _ ->
                             if (renderToken == currentRenderToken) {
-                                showError(getString(R.string.image_load_error))
+                                handleContentFailure(getString(R.string.image_load_error))
                             }
                         }
                     )
                 }
             }
             is TvRenderContent.Video -> {
+                if (content.value.isBlank()) {
+                    handleContentFailure(getString(R.string.video_load_error))
+                    return
+                }
                 showVideo(content.value, renderToken)
             }
         }
@@ -385,6 +437,7 @@ class RendererActivity : AppCompatActivity() {
     private fun showError(message: String) {
         cancelScheduledAdvance()
         cancelCountdown()
+        cancelWebLoadTimeout()
         stopVideoPlayback()
         hideControls()
         activeContent = null
@@ -394,6 +447,7 @@ class RendererActivity : AppCompatActivity() {
         errorOverlay.isVisible = true
         errorMessage.text = message
         imageView.isVisible = false
+        webView.stopLoading()
         webView.isVisible = false
         isWebContentVisible = false
         errorRetryButton.requestFocus()
@@ -449,6 +503,7 @@ class RendererActivity : AppCompatActivity() {
     private fun scheduleNextContent(content: TvRenderContent, renderToken: Long) {
         cancelScheduledAdvance()
         cancelCountdown()
+        cancelWebLoadTimeout()
         if (playlist.isEmpty()) {
             return
         }
@@ -478,6 +533,21 @@ class RendererActivity : AppCompatActivity() {
     private fun cancelScheduledAdvance() {
         contentAdvanceJob?.cancel()
         contentAdvanceJob = null
+    }
+
+    private fun startWebLoadTimeout(renderToken: Long) {
+        cancelWebLoadTimeout()
+        webLoadTimeoutJob = lifecycleScope.launch {
+            delay(WEB_LOAD_TIMEOUT_MS)
+            if (renderToken == currentRenderToken && isWebContentVisible) {
+                handleContentFailure(getString(R.string.webview_load_error))
+            }
+        }
+    }
+
+    private fun cancelWebLoadTimeout() {
+        webLoadTimeoutJob?.cancel()
+        webLoadTimeoutJob = null
     }
 
     private fun startCountdown(durationMs: Long, renderToken: Long) {
@@ -651,6 +721,38 @@ class RendererActivity : AppCompatActivity() {
         finish()
     }
 
+    private fun markCurrentContentHealthy() {
+        failedContentIndexes.remove(currentPlaylistIndex)
+    }
+
+    private fun handleContentFailure(message: String) {
+        cancelScheduledAdvance()
+        cancelCountdown()
+        cancelWebLoadTimeout()
+        stopVideoPlayback()
+        failedContentIndexes += currentPlaylistIndex
+        if (playlist.size > 1 && failedContentIndexes.size < playlist.size) {
+            moveToNextAvailableContent()
+            return
+        }
+        showError(message)
+    }
+
+    private fun moveToNextAvailableContent() {
+        if (playlist.isEmpty()) {
+            return
+        }
+        val startIndex = currentPlaylistIndex
+        do {
+            currentPlaylistIndex = (currentPlaylistIndex + 1) % playlist.size
+            if (currentPlaylistIndex !in failedContentIndexes) {
+                renderCurrentContent()
+                return
+            }
+        } while (currentPlaylistIndex != startIndex)
+        showError(getString(R.string.error_loading_content))
+    }
+
     private fun reportCurrentContentIfNeeded(
         renderToken: Long = activeRenderToken,
         content: TvRenderContent? = activeContent
@@ -698,6 +800,7 @@ class RendererActivity : AppCompatActivity() {
         private const val DEFAULT_DISPLAY_DURATION_MS =
             BuildConfig.TV_DEFAULT_DISPLAY_DURATION_SECONDS * 1_000L
         private const val CONTROLS_AUTO_HIDE_MS = 4_000L
+        private const val WEB_LOAD_TIMEOUT_MS = 20_000L
 
         fun newIntent(context: Context, code: String): Intent {
             return Intent(context, RendererActivity::class.java)
