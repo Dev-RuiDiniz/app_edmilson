@@ -5,6 +5,7 @@ Padronizar a geração de artefatos de produção assinados para distribuição 
 
 ## Pré-requisitos
 - Java/JDK com `keytool`
+- JDK 21 para executar o build com Android Gradle Plugin 9
 - Android Studio (opcional) ou Gradle Wrapper
 - Keystore de upload gerada
 

@@ -7,9 +7,10 @@ App Android (celular + Android TV) em Kotlin para fluxo:
 3. renderizar conteúdo em playlist (URL/HTML/Imagem/Vídeo)
 
 ## Requisitos
-- Min SDK: 26
+- Min SDK: 21
 - Compile SDK: 36
 - Target SDK: 36
+- JDK: 21 para compilar localmente
 - UI em XML + Activities
 
 ## Fluxo
@@ -133,3 +134,4 @@ adb -s 127.0.0.1:5555 shell monkey -p com.example.app_edmilson -c android.intent
 - `docs/release-signing.md`
 - `docs/manual-app.md`
 - `docs/api-tv.md`
+- `docs/device-compatibility.md`

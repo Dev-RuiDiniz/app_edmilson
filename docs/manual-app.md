@@ -11,7 +11,7 @@ Este manual explica como instalar, configurar e operar o app de TV do cliente.
 - Registra na API cada vez que uma propaganda entra em exibição, quando o item possui `id`.
 
 ## Requisitos para uso
-- Android ou Android TV compatível com `minSdk 26`.
+- Android ou Android TV compatível com `minSdk 21` (`Android 5.0` ou superior).
 - Conexão com internet.
 - Código TV válido.
 - API do cliente respondendo nas rotas:
@@ -23,6 +23,13 @@ Este manual explica como instalar, configurar e operar o app de TV do cliente.
 2. Abra o arquivo APK.
 3. Permita a instalação de fontes externas, se o Android solicitar.
 4. Conclua a instalação.
+
+## Compatibilidade com TV Box e Fire TV Stick
+- Esta versão do app foi ajustada para ampliar a compatibilidade de instalação em dispositivos com Android antigo.
+- O piso passou de `minSdk 26` para `minSdk 21`, cobrindo aparelhos a partir do Android 5.0.
+- Isso melhora a chance de instalação em TV Box e Fire TV Stick com sistema antigo ou firmware customizado.
+- Ainda assim, alguns fabricantes podem bloquear instalação por política própria, arquitetura da CPU, armazenamento insuficiente, assinatura do APK ou restrições do Fire OS.
+- Para diagnóstico em campo, prefira validar a mensagem do sistema ou usar `adb install` para capturar o erro exato.
 
 ## Primeiro acesso
 1. Abra o app.
