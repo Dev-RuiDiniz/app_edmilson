@@ -21,6 +21,13 @@ object NetworkModule {
             .connectTimeout(12, TimeUnit.SECONDS)
             .readTimeout(12, TimeUnit.SECONDS)
             .writeTimeout(12, TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .header("Cache-Control", "no-cache, no-store, max-age=0")
+                    .header("Pragma", "no-cache")
+                    .build()
+                chain.proceed(request)
+            }
             .addInterceptor(loggingInterceptor)
             .build()
 

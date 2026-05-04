@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class RendererViewModel(
     private val repository: TvContentRepository
@@ -18,13 +20,14 @@ class RendererViewModel(
     val uiState: StateFlow<RendererUiState> = _uiState.asStateFlow()
 
     private var currentCode: String? = null
+    private val fetchMutex = Mutex()
 
     fun load(code: String) {
         currentCode = code
         _uiState.value = RendererUiState.Loading
 
         viewModelScope.launch {
-            val result = repository.fetchContent(code)
+            val result = fetchContent(code, allowCacheFallback = true)
             _uiState.value = result.fold(
                 onSuccess = { RendererUiState.Success(it.content, it.fromCache) },
                 onFailure = { RendererUiState.Error(it.message ?: "Falha ao carregar conteúdo") }
@@ -36,6 +39,11 @@ class RendererViewModel(
         currentCode?.let(::load)
     }
 
+    suspend fun refresh(): Result<TvContentRepository.FetchResult> {
+        val code = currentCode ?: return Result.failure(IllegalStateException("Código TV ausente"))
+        return fetchContent(code, allowCacheFallback = false)
+    }
+
     fun reportDisplay(content: TvRenderContent) {
         val code = currentCode ?: return
         viewModelScope.launch {
@@ -43,6 +51,15 @@ class RendererViewModel(
                 .onFailure { error ->
                     Log.w(TAG, "Falha ao registrar exibicao da propaganda", error)
                 }
+        }
+    }
+
+    private suspend fun fetchContent(
+        code: String,
+        allowCacheFallback: Boolean
+    ): Result<TvContentRepository.FetchResult> {
+        return fetchMutex.withLock {
+            repository.fetchContent(code, allowCacheFallback = allowCacheFallback)
         }
     }
 

@@ -150,7 +150,7 @@ curl -G "https://hotspot1.edmilsonti.com.br/api/tv/registrar-exibicao" \
 ## Fluxo sugerido no app de TV
 
 1. Na configuração do app, o usuário informa o código TV e, se necessário, a API key.
-2. Ao iniciar o app, ou em intervalo periódico, como a cada 5 minutos, chamar `GET /api/tv/propagandas?codigo=XXX&api_key=YYY`.
+2. Ao iniciar o app, e enquanto a tela de exibição estiver aberta, chamar `GET /api/tv/propagandas?codigo=XXX&api_key=YYY` em intervalo periódico para refletir mudanças em tempo real.
 3. Exibir as propagandas em rotativo, ordenando pelo campo `ordem`.
 4. Utilizar `imagem_url`, `url`, `video_url` ou `html`, conforme o tipo retornado.
 5. Aplicar `duracao`/`duration`/`tempo_exibicao_segundos` para `imagem`, `url` e `html` quando a API informar valor válido.

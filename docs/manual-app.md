@@ -39,6 +39,7 @@ Este manual explica como instalar, configurar e operar o app de TV do cliente.
 
 ## Funcionamento da tela de exibição
 - O conteúdo roda em playlist contínua.
+- Enquanto a tela estiver aberta, o app faz refresh periódico da playlist para captar uploads e exclusões sem reinício.
 - Cada propaganda usa seu próprio tempo de exibição.
 - O tempo de `imagem`, `url` e `html` vem da API pelos campos `duracao`, `duration` ou `tempo_exibicao_segundos`.
 - Se a API não informar tempo válido, o app usa o valor padrão configurado no projeto.

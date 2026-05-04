@@ -20,10 +20,10 @@
     <string name="retry">Tentar novamente</string>
     <string name="swap_content_button">Trocar</string>
     <string name="display_duration_default">Tempo: padrão</string>
-    <string name="display_duration_seconds">Tempo: %1$ss</string>
+    <string name="display_duration_seconds">Tempo: %1$ds</string>
     <string name="display_duration_video">Tempo: vídeo até o fim</string>
-    <string name="display_duration_video_seconds">Tempo: %1$ss</string>
-    <string name="countdown_remaining">Restante: %1$ss</string>
+    <string name="display_duration_video_seconds">Tempo: %1$ds</string>
+    <string name="countdown_remaining">Restante: %1$ds</string>
     <string name="countdown_unavailable">Restante: --</string>
     <string name="countdown_video_live">Restante: vídeo em reprodução</string>
 </resources>

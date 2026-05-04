@@ -33,15 +33,21 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import coil.load
+import coil.request.CachePolicy
 import com.hotspottv.data.model.TvCodeValidator
 import com.hotspottv.data.model.TvRenderContent
 import com.hotspottv.data.repository.TvContentRepository
+import com.hotspottv.ui.renderer.RendererPlaylistReconciler
+import com.hotspottv.ui.renderer.RendererPlaylistRefreshResult
+import com.hotspottv.ui.renderer.RendererPlaylistSnapshot
 import com.hotspottv.ui.renderer.RendererUiState
 import com.hotspottv.ui.renderer.RendererViewModel
 import com.hotspottv.ui.renderer.RendererViewModelFactory
+import com.hotspottv.ui.renderer.renderContentKey
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 import java.util.Locale
 
 class RendererActivity : AppCompatActivity() {
@@ -78,7 +84,9 @@ class RendererActivity : AppCompatActivity() {
     private var activeRenderToken: Long = -1L
     private var activeContent: TvRenderContent? = null
     private var lastReportedRenderToken: Long = -1L
-    private val failedContentIndexes = linkedSetOf<Int>()
+    private val failedContentKeys = linkedSetOf<String>()
+    private var pollingJob: Job? = null
+    private var initialContentResolved: Boolean = false
 
     private val exoPlayerListener = object : Player.Listener {
         override fun onPlayerError(error: PlaybackException) {
@@ -162,6 +170,7 @@ class RendererActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        stopContentPolling()
         cancelScheduledAdvance()
         cancelControlsAutoHide()
         cancelCountdown()
@@ -177,12 +186,14 @@ class RendererActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
+        stopContentPolling()
         exoPlayer?.playWhenReady = false
         super.onStop()
     }
 
     override fun onStart() {
         super.onStart()
+        maybeStartContentPolling()
         if (this::playerView.isInitialized && playerView.isVisible) {
             exoPlayer?.playWhenReady = true
         }
@@ -212,6 +223,7 @@ class RendererActivity : AppCompatActivity() {
             domStorageEnabled = true
             useWideViewPort = true
             loadWithOverviewMode = true
+            cacheMode = WebSettings.LOAD_NO_CACHE
             mediaPlaybackRequiresUserGesture = false
             mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
             userAgentString = "$userAgentString MyTVApp".trim()
@@ -311,11 +323,61 @@ class RendererActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
                     when (state) {
-                        RendererUiState.Loading -> showLoading()
-                        is RendererUiState.Success -> showContent(state)
-                        is RendererUiState.Error -> showError(state.message)
+                        RendererUiState.Loading -> {
+                            initialContentResolved = false
+                            stopContentPolling()
+                            showLoading()
+                        }
+                        is RendererUiState.Success -> {
+                            showContent(state)
+                            initialContentResolved = true
+                            maybeStartContentPolling()
+                        }
+                        is RendererUiState.Error -> {
+                            showError(state.message)
+                            initialContentResolved = true
+                            maybeStartContentPolling()
+                        }
                     }
                 }
+            }
+        }
+    }
+
+    private fun startContentPolling() {
+        if (pollingJob?.isActive == true) {
+            return
+        }
+        pollingJob = lifecycleScope.launch {
+            while (isActive) {
+                refreshContentSilently()
+                delay(CONTENT_POLL_INTERVAL_MS)
+            }
+        }
+    }
+
+    private fun maybeStartContentPolling() {
+        if (!initialContentResolved) {
+            return
+        }
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            return
+        }
+        startContentPolling()
+    }
+
+    private fun stopContentPolling() {
+        pollingJob?.cancel()
+        pollingJob = null
+    }
+
+    private suspend fun refreshContentSilently() {
+        val result = viewModel.refresh()
+        result.onSuccess { fetchResult ->
+            applyFreshContent(fetchResult.content.contents)
+        }.onFailure { error ->
+            if (error !is kotlinx.coroutines.CancellationException) {
+                android.util.Log.d("RendererActivity", "Atualização silenciosa falhou: ${error.message}")
             }
         }
     }
@@ -324,11 +386,12 @@ class RendererActivity : AppCompatActivity() {
         cancelScheduledAdvance()
         cancelCountdown()
         cancelWebLoadTimeout()
+        initialContentResolved = false
         hideControls()
         loadingOverlay.isVisible = true
         errorOverlay.isVisible = false
         sourceHintText.isVisible = false
-        failedContentIndexes.clear()
+        failedContentKeys.clear()
         stopVideoPlayback()
     }
 
@@ -339,7 +402,7 @@ class RendererActivity : AppCompatActivity() {
         isWebContentVisible = false
         playlist = state.content.contents
         currentPlaylistIndex = 0
-        failedContentIndexes.clear()
+        failedContentKeys.clear()
         hideControls()
         updateControlsState()
 
@@ -348,6 +411,45 @@ class RendererActivity : AppCompatActivity() {
             return
         }
         renderCurrentContent()
+    }
+
+    private fun applyFreshContent(content: List<TvRenderContent>) {
+        loadingOverlay.isVisible = false
+        errorOverlay.isVisible = false
+        sourceHintText.isVisible = false
+
+        if (content.isEmpty()) {
+            showError(getString(R.string.error_loading_content))
+            return
+        }
+
+        val currentPlaylist = playlist
+        val snapshot = RendererPlaylistSnapshot(
+            playlist = currentPlaylist,
+            currentIndex = currentPlaylistIndex,
+            activeContent = activeContent,
+            failedContentKeys = failedContentKeys
+        )
+        when (val result = RendererPlaylistReconciler.reconcile(snapshot, content)) {
+            RendererPlaylistRefreshResult.Empty -> {
+                showError(getString(R.string.error_loading_content))
+            }
+            is RendererPlaylistRefreshResult.Keep -> {
+                playlist = result.playlist
+                currentPlaylistIndex = result.currentIndex
+                failedContentKeys.clear()
+                failedContentKeys.addAll(result.failedContentKeys)
+                updateControlsState()
+            }
+            is RendererPlaylistRefreshResult.Rerender -> {
+                playlist = result.playlist
+                currentPlaylistIndex = result.currentIndex
+                failedContentKeys.clear()
+                failedContentKeys.addAll(result.failedContentKeys)
+                hideControls()
+                renderCurrentContent()
+            }
+        }
     }
 
     private fun renderCurrentContent() {
@@ -374,7 +476,13 @@ class RendererActivity : AppCompatActivity() {
                 webView.isVisible = true
                 isWebContentVisible = true
                 startWebLoadTimeout(renderToken)
-                webView.loadUrl(content.value)
+                webView.loadUrl(
+                    content.value,
+                    mapOf(
+                        "Cache-Control" to "no-cache, no-store, must-revalidate",
+                        "Pragma" to "no-cache"
+                    )
+                )
                 webView.requestFocus()
                 scheduleNextContent(content, renderToken)
             }
@@ -408,6 +516,8 @@ class RendererActivity : AppCompatActivity() {
                 imageView.isVisible = true
                 imageView.load(content.value) {
                     crossfade(true)
+                    memoryCachePolicy(CachePolicy.DISABLED)
+                    diskCachePolicy(CachePolicy.DISABLED)
                     listener(
                         onSuccess = { _, _ ->
                             if (renderToken == currentRenderToken) {
@@ -722,7 +832,7 @@ class RendererActivity : AppCompatActivity() {
     }
 
     private fun markCurrentContentHealthy() {
-        failedContentIndexes.remove(currentPlaylistIndex)
+        activeContent?.let { failedContentKeys.remove(renderContentKey(it)) }
     }
 
     private fun handleContentFailure(message: String) {
@@ -730,8 +840,8 @@ class RendererActivity : AppCompatActivity() {
         cancelCountdown()
         cancelWebLoadTimeout()
         stopVideoPlayback()
-        failedContentIndexes += currentPlaylistIndex
-        if (playlist.size > 1 && failedContentIndexes.size < playlist.size) {
+        activeContent?.let { failedContentKeys += renderContentKey(it) }
+        if (playlist.size > 1 && failedContentKeys.size < playlist.size) {
             moveToNextAvailableContent()
             return
         }
@@ -742,14 +852,26 @@ class RendererActivity : AppCompatActivity() {
         if (playlist.isEmpty()) {
             return
         }
-        val startIndex = currentPlaylistIndex
-        do {
-            currentPlaylistIndex = (currentPlaylistIndex + 1) % playlist.size
-            if (currentPlaylistIndex !in failedContentIndexes) {
+        seekAndRenderNextAvailableContent(startIndex = currentPlaylistIndex + 1)
+    }
+
+    private fun seekAndRenderNextAvailableContent(startIndex: Int) {
+        if (playlist.isEmpty()) {
+            return
+        }
+        val firstIndex = if (startIndex in playlist.indices) startIndex else 0
+        repeat(playlist.size) { offset ->
+            val candidateIndex = if (offset == 0) {
+                firstIndex
+            } else {
+                (firstIndex + offset) % playlist.size
+            }
+            if (renderContentKey(playlist[candidateIndex]) !in failedContentKeys) {
+                currentPlaylistIndex = candidateIndex
                 renderCurrentContent()
                 return
             }
-        } while (currentPlaylistIndex != startIndex)
+        }
         showError(getString(R.string.error_loading_content))
     }
 
@@ -799,6 +921,7 @@ class RendererActivity : AppCompatActivity() {
         private const val EXTRA_TV_CODE = "extra_tv_code"
         private const val DEFAULT_DISPLAY_DURATION_MS =
             BuildConfig.TV_DEFAULT_DISPLAY_DURATION_SECONDS * 1_000L
+        private const val CONTENT_POLL_INTERVAL_MS = 5_000L
         private const val CONTROLS_AUTO_HIDE_MS = 4_000L
         private const val WEB_LOAD_TIMEOUT_MS = 20_000L
 

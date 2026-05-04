@@ -27,7 +27,10 @@ class TvContentRepository(
     private val cachePrefs = context.getSharedPreferences(CACHE_PREFS_NAME, Context.MODE_PRIVATE)
     private val memoryCache = mutableMapOf<String, ResolvedTvContent>()
 
-    suspend fun fetchContent(rawCode: String): Result<FetchResult> {
+    suspend fun fetchContent(
+        rawCode: String,
+        allowCacheFallback: Boolean = true
+    ): Result<FetchResult> {
         val code = TvCodeValidator.normalize(rawCode)
         val endpoint = resolveEndpoint(code)
         val fullUrl = buildApiUrl(endpoint)
@@ -41,6 +44,7 @@ class TvContentRepository(
                 val details = if (errorPayload.isBlank()) "" else " - $errorPayload"
                 return failureOrCached(
                     code = code,
+                    allowCacheFallback = allowCacheFallback,
                     error = IllegalStateException(
                         "API retornou status ${response.code()} em $fullUrl$details"
                     )
@@ -50,6 +54,7 @@ class TvContentRepository(
             val body = response.body()
                 ?: return failureOrCached(
                     code = code,
+                    allowCacheFallback = allowCacheFallback,
                     error = IllegalStateException("Resposta vazia da API")
                 )
             if (body.isApiFailure()) {
@@ -57,19 +62,25 @@ class TvContentRepository(
                     .ifBlank { "Resposta inválida da API" }
                 return failureOrCached(
                     code = code,
+                    allowCacheFallback = allowCacheFallback,
                     error = IllegalStateException(apiMessage)
                 )
             }
             val parsed = TvContentParser.parse(body, requestedCode = code)
                 ?: return failureOrCached(
                     code = code,
+                    allowCacheFallback = allowCacheFallback,
                     error = IllegalStateException("API sem conteúdo renderizável")
                 )
 
             saveCache(parsed)
             Result.success(FetchResult(content = parsed, fromCache = false))
         } catch (error: Throwable) {
-            failureOrCached(code = code, error = error)
+            failureOrCached(
+                code = code,
+                allowCacheFallback = allowCacheFallback,
+                error = error
+            )
         }
     }
 
@@ -141,7 +152,14 @@ class TvContentRepository(
         return "$base/$normalizedEndpoint"
     }
 
-    private fun failureOrCached(code: String, error: Throwable): Result<FetchResult> {
+    private fun failureOrCached(
+        code: String,
+        allowCacheFallback: Boolean,
+        error: Throwable
+    ): Result<FetchResult> {
+        if (!allowCacheFallback) {
+            return Result.failure(error)
+        }
         loadCachedResult(code)?.let { return Result.success(it) }
         return Result.failure(error)
     }

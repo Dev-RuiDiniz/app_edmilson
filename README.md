@@ -42,6 +42,8 @@ App Android (celular + Android TV) em Kotlin para fluxo:
 - Cache:
   - salva a última playlist renderizável por código (memória + `SharedPreferences`)
   - usa cache quando API falha por status HTTP, exceção de rede, resposta vazia ou payload sem conteúdo renderizável
+- Atualização:
+  - enquanto a tela de `RendererActivity` estiver aberta, o app refaz a consulta da playlist periodicamente para refletir uploads e exclusões sem reiniciar
 - Renderização:
   - `url` e `html` em `WebView`
   - `image` em `ImageView` (Coil)
