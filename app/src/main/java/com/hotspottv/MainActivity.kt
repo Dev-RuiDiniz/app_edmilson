@@ -11,6 +11,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import com.hotspottv.data.model.TvCodeValidator
+import com.hotspottv.data.model.RecentTvCodeHistory
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputLayout
 import org.json.JSONArray
@@ -128,20 +129,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun saveRecentCode(code: String) {
-        val currentCodes = loadRecentCodes()
-            .filterNot { it.equals(code, ignoreCase = true) }
-            .toMutableList()
-
-        currentCodes.add(0, code)
-        val trimmed = currentCodes.take(MAX_RECENT_CODES)
-
-        prefs.edit().putString(KEY_RECENT_CODES, JSONArray(trimmed).toString()).apply()
+        val updatedCodes = RecentTvCodeHistory.addRecentCode(loadRecentCodes(), code)
+        persistRecentCodes(updatedCodes)
         renderRecentCodes()
     }
 
     private fun loadRecentCodes(): List<String> {
         val raw = prefs.getString(KEY_RECENT_CODES, null) ?: return emptyList()
-        return runCatching {
+        val codes = runCatching {
             val jsonArray = JSONArray(raw)
             buildList {
                 for (index in 0 until jsonArray.length()) {
@@ -152,6 +147,15 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }.getOrDefault(emptyList())
+        val normalized = RecentTvCodeHistory.normalizeAndLimit(codes)
+        if (normalized != codes) {
+            persistRecentCodes(normalized)
+        }
+        return normalized
+    }
+
+    private fun persistRecentCodes(codes: List<String>) {
+        prefs.edit().putString(KEY_RECENT_CODES, JSONArray(codes).toString()).apply()
     }
 
     private fun requestInitialFocus() {
@@ -177,8 +181,6 @@ class MainActivity : AppCompatActivity() {
 
         private const val PREFS_NAME = "tv_code_prefs"
         private const val KEY_RECENT_CODES = "recent_codes_json"
-        private const val MAX_RECENT_CODES = 10
-
         fun newHomeIntent(context: Context): Intent {
             return Intent(context, MainActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
