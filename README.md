@@ -2,9 +2,10 @@
 
 App Android (celular + Android TV) em Kotlin para fluxo:
 
-1. inserir/selecionar **Código TV**
-2. consultar API por código
-3. renderizar conteúdo em playlist (URL/HTML/Imagem/Vídeo)
+1. inserir/selecionar `Codigo TV`
+2. identificar o aparelho com `device_id`
+3. consultar API por codigo
+4. renderizar conteudo em playlist
 
 ## Requisitos
 - Min SDK: 21
@@ -14,92 +15,66 @@ App Android (celular + Android TV) em Kotlin para fluxo:
 - UI em XML + Activities
 
 ## Fluxo
-1. `MainActivity` exibe input + lista de códigos recentes.
-2. Código válido abre `RendererActivity`.
-3. `RendererActivity` chama endpoint configurável por código.
-4. O retorno é renderizado:
+1. `MainActivity` exibe input + lista de codigos recentes.
+2. Codigo valido abre `RendererActivity`.
+3. `RendererActivity` chama endpoint configuravel por codigo.
+4. O retorno e renderizado:
    - `type = "url"` -> `WebView.loadUrl`
    - `type = "html"` -> `WebView.loadDataWithBaseURL`
    - `type = "image"` -> `ImageView` com Coil
-   - `type = "video"` (ou URL com extensão de vídeo) -> `PlayerView` + ExoPlayer
-   - sem `type` + `url` válida -> assume URL
+   - `type = "video"` -> `PlayerView` + ExoPlayer
 
-## Lógica do sistema
-- Entrada do código:
-  - normaliza para maiúsculo (`TV...`)
-  - valida prefixo `TV` e tamanho mínimo de 6 caracteres
-  - salva histórico local dos últimos códigos usados
+## Logica do sistema
+- Entrada do codigo:
+  - normaliza para maiusculo (`TV...`)
+  - valida prefixo `TV` e tamanho minimo de 6 caracteres
+  - salva historico local dos ultimos codigos usados
+  - exibe no maximo os 3 codigos recentes na tela inicial
+- Identificacao do aparelho:
+  - usa `Settings.Secure.ANDROID_ID` como `device_id`
+  - envia `device_id` em `/api/tv/propagandas`
+  - envia `device_id` em `/api/tv/registrar-exibicao`
 - Consulta API:
   - usa `Retrofit + OkHttp`
-  - endpoint montado por `API_TV_CONTENT_PATH_TEMPLATE` com substituição `%s` ou `{code}`
-  - endpoint de registro montado por `API_TV_REGISTER_DISPLAY_PATH_TEMPLATE` com substituição `{id}` e `{code}`
-  - código é URL-encoded antes da chamada
-- Parse de resposta:
-  - suporta resposta completa (`id`, `code`, `type`, `url/html/imageUrl`) e simples (`url`)
-  - suporta item único (`data`, `propaganda`) e lista (`propagandas`)
-  - se `type` vier inconsistente (ex.: `type=url` sem `url`), aplica fallback automático para outros campos válidos
-  - remove duplicados de mídia na lista final mantendo ordem de chegada da API
+  - endpoint montado por `API_TV_CONTENT_PATH_TEMPLATE` com substituicao `%s` ou `{code}`
+  - endpoint de registro montado por `API_TV_REGISTER_DISPLAY_PATH_TEMPLATE` com substituicao `{id}` e `{code}`
+- Bloqueios de autorizacao:
+  - se a API responder `limite_tvs_atingido=true`, o app nao abre a playlist
+  - se a API responder `device_id_obrigatorio=true`, o app nao abre a playlist
+  - nesses casos o app usa a tela de erro atual com mensagem especifica
+  - erros de autorizacao nao usam fallback de cache
 - Cache:
-  - salva a última playlist renderizável por código (memória + `SharedPreferences`)
-  - usa cache quando API falha por status HTTP, exceção de rede, resposta vazia ou payload sem conteúdo renderizável
-- Atualização:
-  - enquanto a tela de `RendererActivity` estiver aberta, o app refaz a consulta da playlist periodicamente para refletir uploads e exclusões sem reiniciar
-- Renderização:
-  - `url` e `html` em `WebView`
-  - `image` em `ImageView` (Coil)
-  - `video` em `PlayerView` (ExoPlayer), com autoplay
-- `image`, `url` e `html` usam `duracao`/`duration`/`tempo_exibicao_segundos` da API quando disponível
-  - fallback para `image`, `url` e `html`: `TV_DEFAULT_DISPLAY_DURATION_SECONDS`
-  - `video` toca até o fim e então avança para o próximo item
-  - o overlay de controle aparece ao clicar/tocar na tela
-  - o overlay mostra `Tempo`, contador `Restante`, botão `Trocar` e botão `Início`
-  - em vídeo, o contador e o tempo exibido usam a duração real do arquivo quando disponível
-  - o app chama `/api/tv/registrar-exibicao` a cada vez que uma propaganda entra em exibição
-  - quando há somente 1 vídeo, o player reinicia automaticamente em loop de playlist
-  - estado de `Loading`, `Success`, `Error`, com ação de voltar ao início no overlay de erro
-
-## Launcher Icon (Android/Android TV)
-- Adaptive icon ativo em:
-  - `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`
-  - `app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml`
-- Arte-base do launcher:
-  - `icone.jpeg`
-- Foreground com `inset` seguro para manter a arte inteira visível:
-  - `app/src/main/res/drawable/ic_launcher_foreground.xml`
-- Ícones legados (`mipmap-mdpi` até `mipmap-xxxhdpi`) regenerados com conteúdo centralizado e margem de segurança, evitando corte de texto em launchers com máscaras diferentes.
+  - salva a ultima playlist renderizavel por codigo
+  - usa cache apenas em falhas genericas de rede, HTTP ou resposta invalida
+- Atualizacao:
+  - enquanto a tela de `RendererActivity` estiver aberta, o app refaz a consulta periodicamente
+  - a reconciliacao atualiza imagens, videos e demais itens sem exigir reinicio do app
 
 ## API e BuildConfig
 Arquivo: `app/build.gradle.kts`
 
-Variáveis suportadas (Gradle property ou env var):
-- `API_BASE_URL` (ex.: `https://hotspot1.edmilsonti.com.br`)
-- `API_TV_CONTENT_PATH_TEMPLATE` (default: `api/tv/propagandas?codigo={code}&api_key=TV56beafcbe547ac8d6b4a95685efb2dc39b7b260fb645b55a`)
-- `API_TV_REGISTER_DISPLAY_PATH_TEMPLATE` (default: `api/tv/registrar-exibicao?id={id}&codigo={code}&api_key=...`)
-- `TV_DEFAULT_DISPLAY_DURATION_SECONDS` (default: `30`)
+Variaveis suportadas:
+- `API_BASE_URL`
+- `API_TV_CONTENT_PATH_TEMPLATE`
+- `API_TV_REGISTER_DISPLAY_PATH_TEMPLATE`
+- `TV_DEFAULT_DISPLAY_DURATION_SECONDS`
+- `RELEASE_STORE_FILE`
+- `RELEASE_STORE_PASSWORD`
+- `RELEASE_KEY_ALIAS`
+- `RELEASE_KEY_PASSWORD`
 
-Exemplos de template aceitos:
-- `api/tv/propagandas?codigo={code}`
-- `api/tv/propagandas?codigo=%s`
-- `api/tv/propagandas?codigo={code}&api_key=TV56beafcbe547ac8d6b4a95685efb2dc39b7b260fb645b55a`
-- `https://hotspot1.edmilsonti.com.br/api/tv/propagandas?codigo={code}`
+### Contrato atual da API TV
 
-Regra de montagem da URL:
-- URL da API = Base + endpoint.
-- Ex.: `https://hotspot1.edmilsonti.com.br` + `api/tv/propagandas?codigo=TV2665487D&api_key=TV56beafcbe547ac8d6b4a95685efb2dc39b7b260fb645b55a`.
+Chamadas esperadas:
 
-Contrato de duração por item:
-- A API pode enviar `duracao`, `duration` ou `tempo_exibicao_segundos` em segundos para cada item de `propagandas`.
-- O app converte esse valor para milissegundos internamente.
-- Para `image`, `url` e `html`, o app usa o valor enviado pela API quando ele for maior que zero.
-- Quando esse valor não vier, for inválido ou `<= 0`, o app usa `TV_DEFAULT_DISPLAY_DURATION_SECONDS`.
-- Para `video`, o app usa a duração real do player; se indisponível, segue até o fim da reprodução.
+```text
+/api/tv/propagandas?codigo=...&device_id=...&api_key=...
+/api/tv/registrar-exibicao?id=...&codigo=...&device_id=...&api_key=...
+```
 
-Contrato de registro de exibição:
-- A API deve retornar `id` para cada propaganda que precise ser contabilizada.
-- O app chama `/api/tv/registrar-exibicao` uma vez por renderização de item exibido.
-- Para `image`, o envio acontece após a imagem carregar.
-- Para `url`/`html`, o envio acontece após o `WebView` concluir o carregamento.
-- Para `video`, o envio acontece quando o player entra em `STATE_READY`.
+Flags especiais de bloqueio:
+- `limite_tvs_atingido=true`
+- `device_id_obrigatorio=true`
 
 ## Build
 ```powershell
@@ -107,44 +82,27 @@ Contrato de registro de exibição:
 .\gradlew.bat assembleRelease
 ```
 
+Observacao:
+- `assembleRelease` exige assinatura configurada.
+- Sem `keystore.properties` ou `RELEASE_*`, o build release falha por regra do projeto.
+
+## Artefatos
+
 APK debug:
 - `app/build/outputs/apk/debug/app-debug.apk`
 
 APK release:
 - `app/build/outputs/apk/release/app-release.apk`
-
-## Teste no BlueStacks
-Com BlueStacks aberto:
-
-```powershell
-adb connect 127.0.0.1:5555
-adb -s 127.0.0.1:5555 install -r app\build\outputs\apk\debug\app-debug.apk
-adb -s 127.0.0.1:5555 shell monkey -p com.hotspottv -c android.intent.category.LAUNCHER 1
-```
+- requer assinatura configurada
 
 ## Testes
-- Testes unitários atuais:
-  - parse da API (resposta padrão e resposta simples)
-  - fallback de parse quando `type` não casa com o payload
-  - montagem de playlist com múltiplas propagandas em ordem
-  - validação de código TV
-- Teste instrumentado mínimo:
-  - abertura da `MainActivity`
-  - navegação por código válido até a `RendererActivity`
-- Executar:
-```powershell
-.\gradlew.bat testDebugUnitTest
-.\gradlew.bat assembleDebugAndroidTest
-```
+- `.\gradlew.bat testDebugUnitTest`
+- `.\gradlew.bat testDebugUnitTest assembleDebug`
 
-## Documentação
-- `docs/sprint-1.md`
-- `docs/sprint-2.md`
-- `docs/sprint-3.md`
-- `docs/release-signing.md`
+## Documentacao
 - `docs/manual-app.md`
+- `docs/api-tv.md`
 - `docs/installation-guide.md`
 - `docs/client-delivery.md`
-- `docs/validation-matrix.md`
-- `docs/api-tv.md`
 - `docs/device-compatibility.md`
+- `docs/release-signing.md`

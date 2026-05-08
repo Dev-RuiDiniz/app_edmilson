@@ -4,84 +4,123 @@
 Este manual explica como instalar, configurar e operar o app de TV do cliente.
 
 ## O que o app faz
-- Recebe um `Código TV`.
+- Recebe um `Codigo TV`.
+- Identifica o aparelho automaticamente por `device_id`.
 - Consulta a API do cliente.
 - Exibe propagandas em playlist.
 - Suporta `imagem`, `url`, `html` e `video`.
-- Registra na API cada vez que uma propaganda entra em exibição, quando o item possui `id`.
+- Registra na API cada vez que uma propaganda entra em exibicao, quando o item possui `id`.
 
 ## Requisitos para uso
-- Android ou Android TV compatível com `minSdk 21` (`Android 5.0` ou superior).
-- Conexão com internet.
-- Código TV válido.
+- Android ou Android TV compativel com `minSdk 21` (`Android 5.0` ou superior).
+- Conexao com internet.
+- `Codigo TV` valido.
 - API do cliente respondendo nas rotas:
   - `/api/tv/propagandas`
   - `/api/tv/registrar-exibicao`
+- O aparelho precisa estar autorizado no limite de TVs definido no painel do cliente.
 
-## Instalação do APK
-1. Envie o APK release do HotSpotTV para o dispositivo.
+## Instalacao do APK
+1. Envie o APK para o dispositivo.
 2. Abra o arquivo APK.
-3. Permita a instalação de fontes externas, se o Android solicitar.
-4. Conclua a instalação.
+3. Permita a instalacao de fontes externas, se o Android solicitar.
+4. Conclua a instalacao.
+
+Observacao:
+- Para uso final com cliente, o ideal e enviar um APK `release` assinado.
+- Nesta maquina, a assinatura de release depende de `keystore.properties` ou variaveis `RELEASE_*`.
+- Enquanto essa assinatura nao estiver configurada, o artefato disponivel para homologacao e o APK `debug`.
 
 ## Compatibilidade com TV Box e Fire TV Stick
-- Esta versão do app foi ajustada para ampliar a compatibilidade de instalação em dispositivos com Android antigo.
-- O piso passou de `minSdk 26` para `minSdk 21`, cobrindo aparelhos a partir do Android 5.0.
-- Isso melhora a chance de instalação em TV Box e Fire TV Stick com sistema antigo ou firmware customizado.
-- Ainda assim, alguns fabricantes podem bloquear instalação por política própria, arquitetura da CPU, armazenamento insuficiente, assinatura do APK ou restrições do Fire OS.
-- Para diagnóstico em campo, prefira validar a mensagem do sistema ou usar `adb install` para capturar o erro exato.
+- Esta versao do app foi ajustada para ampliar a compatibilidade de instalacao em dispositivos com Android antigo.
+- O piso e `minSdk 21`, cobrindo aparelhos a partir do Android 5.0.
+- Isso melhora a chance de instalacao em TV Box e Fire TV Stick com sistema antigo ou firmware customizado.
+- Alguns fabricantes ainda podem bloquear instalacao por politica propria, arquitetura da CPU, armazenamento insuficiente, assinatura do APK ou restricoes do Fire OS.
 
 ## Primeiro acesso
 1. Abra o app.
-2. Aguarde a tela inicial de seleção de código.
-3. Digite o `Código TV` ou escolha um código recente.
+2. Aguarde a tela inicial de selecao de codigo.
+3. Digite o `Codigo TV` ou escolha um codigo recente.
 4. Toque em `Conectar`.
 
-## Funcionamento da tela de exibição
-- O conteúdo roda em playlist contínua.
-- Enquanto a tela estiver aberta, o app faz refresh periódico da playlist para captar uploads e exclusões sem reinício.
-- Cada propaganda usa seu próprio tempo de exibição.
+## Codigos recentes
+- A tela inicial guarda historico local dos ultimos codigos usados.
+- O app exibe no maximo os 3 codigos mais recentes para facilitar reconexao rapida.
+
+## Identificacao do aparelho
+- O app envia automaticamente um `device_id` estavel do aparelho em todas as chamadas de TV.
+- Esse identificador e usado pelo backend para controlar quantas TVs cada cliente pode autorizar.
+- O usuario nao precisa preencher esse identificador manualmente.
+
+## Regras de autorizacao por TV
+- Se o aparelho ja estiver autorizado para o cliente, o app carrega normalmente.
+- Se for um aparelho novo e ainda houver vagas dentro do `limite_tvs`, o backend autoriza e libera o uso.
+- Se for um aparelho novo e o limite estiver esgotado, o app nao abre a playlist.
+- Se a API exigir `device_id` e ele nao puder ser obtido, o app tambem nao abre a playlist.
+
+## Mensagens de bloqueio
+Quando houver bloqueio por autorizacao, a tela de erro atual do app pode mostrar:
+
+- `Este aparelho nao esta autorizado para este cliente.`
+- `Nao foi possivel identificar este aparelho. Verifique a configuracao.`
+
+Nesses casos:
+- o conteudo nao sera exibido;
+- o usuario pode tentar novamente;
+- o usuario pode voltar para a tela inicial.
+
+## Funcionamento da tela de exibicao
+- O conteudo roda em playlist continua.
+- Enquanto a tela estiver aberta, o app faz refresh periodico da playlist para captar uploads e exclusoes sem reinicio.
+- Esse refresh em tempo real vale para imagens, videos e demais itens da playlist.
+- Cada propaganda usa seu proprio tempo de exibicao.
 - O tempo de `imagem`, `url` e `html` vem da API pelos campos `duracao`, `duration` ou `tempo_exibicao_segundos`.
-- Se a API não informar tempo válido, o app usa o valor padrão configurado no projeto.
-- `Video` roda até o final do arquivo.
-- Se a API enviar uma URL de vídeo em qualquer campo de mídia, o app detecta a extensão e envia o conteúdo para o player.
-- O player está preparado para reproduzir formatos como `mp4`, `m3u8`, `mpd` e `webm`, além de outras extensões de vídeo detectadas pela URL.
+- Se a API nao informar tempo valido, o app usa o valor padrao configurado no projeto.
+- `Video` roda ate o final do arquivo.
+- Se a API enviar uma URL de video em qualquer campo de midia, o app detecta a extensao e envia o conteudo para o player.
+- O player esta preparado para reproduzir formatos como `mp4`, `m3u8`, `mpd` e `webm`, alem de outras extensoes de video detectadas pela URL.
 
 ## Controles na tela
 - Clique ou toque na tela para abrir o painel de controle.
-- `Trocar`: avança para a próxima propaganda.
-- `Início`: volta para a tela inicial de seleção de código.
+- `Trocar`: avanca para a proxima propaganda.
+- `Inicio`: volta para a tela inicial de selecao de codigo.
 - `Tempo`: mostra o tempo configurado do item atual.
 - `Restante`: mostra o contador regressivo do item atual.
 
 ## Regras do contador
 - Em `imagem`, `url` e `html`, o contador usa o tempo da API ou o fallback do app.
 - Em `video`, o contador usa o tempo real retornado pelo player.
-- Se a duração do vídeo não estiver disponível, o app mostra que o vídeo está em reprodução.
+- Se a duracao do video nao estiver disponivel, o app mostra que o video esta em reproducao.
 
-## Registro de exibição
-- O app chama a rota de registro quando a propaganda começa a ser exibida.
+## Registro de exibicao
+- O app chama a rota de registro quando a propaganda comeca a ser exibida.
+- O `device_id` tambem e enviado nessa chamada.
 - Regras por tipo:
-  - `imagem`: após carregar a imagem.
-  - `url` e `html`: após o carregamento do `WebView`.
-  - `video`: quando o player fica pronto para reprodução.
+  - `imagem`: apos carregar a imagem.
+  - `url` e `html`: apos o carregamento do `WebView`.
+  - `video`: quando o player fica pronto para reproducao.
 - Para esse envio funcionar, a API deve retornar `id` em cada propaganda.
 
-## Ícone do aplicativo
-- O APK atual já inclui o ícone configurado para o cliente no launcher do Android e Android TV.
+## Icone do aplicativo
+- O APK atual ja inclui o icone configurado para o cliente no launcher do Android e Android TV.
 
-## Solução de problemas
-- Tela não carrega:
+## Solucao de problemas
+- Tela nao carrega:
   - verifique internet e disponibilidade da API.
-- Código TV inválido:
-  - confirme se começa com `TV` e tem o formato esperado.
+- Codigo TV invalido:
+  - confirme se comeca com `TV` e tem o formato esperado.
+- Aparelho bloqueado:
+  - confirme no painel se a TV ja foi autorizada ou se o `limite_tvs` do cliente foi atingido.
+- Device ID obrigatorio:
+  - reinicie o aparelho e teste novamente; se persistir, validar configuracao do Android/TV Box.
 - Propaganda sem trocar:
   - verifique se a API retornou `duracao`, `duration` ou `tempo_exibicao_segundos`.
-- Vídeo não abre:
-  - confirme se a URL enviada pela API aponta para um arquivo ou stream de vídeo válido e acessível pela TV.
-- Contador do painel não aparece correto:
-  - confirme se o item é `video` com duração detectável ou se a API está enviando a duração para conteúdos não-vídeo.
+- Video nao abre:
+  - confirme se a URL enviada pela API aponta para um arquivo ou stream de video valido e acessivel pela TV.
 
-## Artefato para envio ao cliente
+## Artefatos
+- APK debug para homologacao:
+  - `app/build/outputs/apk/debug/app-debug.apk`
 - APK release assinado:
   - `app/build/outputs/apk/release/app-release.apk`
+  - requer assinatura configurada antes da geracao

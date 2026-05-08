@@ -1,25 +1,25 @@
-# Documentação da API TV do HotSpotTV
+# Documentacao da API TV do HotSpotTV
 
-## Visão geral
+## Visao geral
 
-A API TV serve para o app de TV, como o aplicativo na TV do estabelecimento, obter a lista de propagandas a exibir e, opcionalmente, registrar quantas vezes cada propaganda passou na TV.
+A API TV serve para o app de TV obter a lista de propagandas a exibir e registrar quantas vezes cada propaganda passou na TV.
 
-O estabelecimento é identificado pelo código TV. Cada Mikrotik possui um código, configurado no painel do cliente em `TV -> Código TV por Mikrotik`.
+O estabelecimento e identificado pelo `codigo TV`. Cada aparelho tambem e identificado por um `device_id`, usado para controlar o limite de TVs autorizadas por cliente.
 
-Cada propaganda também pode informar sua própria duração de exibição no app.
+Cada propaganda tambem pode informar sua propria duracao de exibicao no app.
 
-## Autenticação
+## Autenticacao
 
-A autenticação é obrigatória via `api_key`, enviada de uma destas formas:
+A autenticacao e obrigatoria via `api_key`, enviada de uma destas formas:
 
 - Query string: `api_key=SUA_API_KEY`
 - Header: `X-API-Key: SUA_API_KEY`
 
-O valor da chave é configurado em `config/app.php` (`TV_API_KEY`) ou pela variável de ambiente `TV_API_KEY`.
+O valor da chave e configurado em `config/app.php` (`TV_API_KEY`) ou pela variavel de ambiente `TV_API_KEY`.
 
 ## Base URL
 
-A base URL é a mesma origem do sistema.
+A base URL e a mesma origem do sistema.
 
 Exemplo:
 
@@ -27,11 +27,11 @@ Exemplo:
 https://seusite.com
 ```
 
-Todas as rotas abaixo utilizam o método `GET`.
+Todas as rotas abaixo utilizam o metodo `GET`.
 
 ## 1. Listar propagandas
 
-Uso: o app de TV chama este endpoint periodicamente, ou ao iniciar, para obter as propagandas que devem ser exibidas no rotativo.
+Uso: o app de TV chama este endpoint ao iniciar e periodicamente para obter as propagandas que devem ser exibidas no rotativo.
 
 ### Endpoint
 
@@ -39,27 +39,34 @@ Uso: o app de TV chama este endpoint periodicamente, ou ao iniciar, para obter a
 GET /api/tv/propagandas
 ```
 
-### Parâmetros
+### Parametros
 
-| Parâmetro | Obrigatório | Descrição |
+| Parametro | Obrigatorio | Descricao |
 | --- | --- | --- |
-| `codigo` | Sim | Código TV do Mikrotik |
+| `codigo` | Sim | Codigo TV do Mikrotik |
+| `device_id` | Sim | Identificador estavel do aparelho |
 | `api_key` | Sim | Chave da API |
 
-Alternativa: enviar `X-API-Key: SUA_API_KEY` no header e manter apenas `?codigo=XXX` na query string.
+Alternativa: enviar `X-API-Key: SUA_API_KEY` no header e manter apenas `codigo` e `device_id` na query string.
+
+### Regras de autorizacao por dispositivo
+
+- Se `device_id` ja estiver autorizado para o cliente, a API libera.
+- Se for um `device_id` novo e ainda couber no `limite_tvs`, a API autoriza e grava o vinculo.
+- Se for um `device_id` novo e o limite estiver esgotado, a API bloqueia.
+- Se `device_id` nao for enviado, a API rejeita a chamada.
 
 ### Campos aceitos por item de propaganda
 
-| Campo | Obrigatório | Descrição |
+| Campo | Obrigatorio | Descricao |
 | --- | --- | --- |
-| `imagem_url` / `url` / `video_url` / `html` | Sim | Conteúdo a renderizar |
-| `duracao` / `duration` / `tempo_exibicao_segundos` | Não | Tempo de exibição em segundos enviado pela API |
+| `imagem_url` / `url` / `video_url` / `html` | Sim | Conteudo a renderizar |
+| `duracao` / `duration` / `tempo_exibicao_segundos` | Nao | Tempo de exibicao em segundos enviado pela API |
 
 Regras:
-- O app usa `duracao`/`duration`/`tempo_exibicao_segundos` para `imagem`, `url` e `html` quando o valor for numérico e maior que zero.
-- Se esse campo não vier, for inválido ou `<= 0`, o app usa o fallback local configurado em `TV_DEFAULT_DISPLAY_DURATION_SECONDS`.
-- Vídeos continuam reproduzindo até o fim do arquivo ou stream e só então avançam para o próximo item.
-- Quando a duração do vídeo é conhecida pelo player, o app mostra esse tempo no overlay e no contador de tempo restante.
+- O app usa `duracao`/`duration`/`tempo_exibicao_segundos` para `imagem`, `url` e `html` quando o valor for numerico e maior que zero.
+- Se esse campo nao vier, for invalido ou `<= 0`, o app usa o fallback local configurado em `TV_DEFAULT_DISPLAY_DURATION_SECONDS`.
+- Videos continuam reproduzindo ate o fim do arquivo ou stream e so entao avancam para o proximo item.
 
 ### Resposta 200
 
@@ -80,16 +87,24 @@ Regras:
 }
 ```
 
-### Resposta 400
+### Resposta de bloqueio por limite
 
 ```json
-{"success": false, "error": "Parâmetro codigo é obrigatório"}
+{
+  "success": false,
+  "limite_tvs_atingido": true,
+  "message": "Limite de TVs atingido"
+}
 ```
 
-### Resposta 403
+### Resposta de `device_id` ausente
 
 ```json
-{"success": false, "error": "Acesso negado. API key inválida."}
+{
+  "success": false,
+  "device_id_obrigatorio": true,
+  "error": "device_id obrigatorio"
+}
 ```
 
 ### Exemplo cURL
@@ -97,12 +112,13 @@ Regras:
 ```bash
 curl -G "https://hotspot1.edmilsonti.com.br/api/tv/propagandas" \
   --data-urlencode "codigo=TV1A2B3C4D" \
+  --data-urlencode "device_id=ANDROID-ID-DA-TV" \
   --data-urlencode "api_key=SUA_API_KEY"
 ```
 
-## 2. Registrar exibição
+## 2. Registrar exibicao
 
-Uso: quando o app de TV exibir uma propaganda na tela, ele chama este endpoint para incrementar o contador `Quantas vezes passou na TV` no painel do cliente.
+Uso: quando o app de TV exibir uma propaganda na tela, ele chama este endpoint para incrementar o contador no painel do cliente.
 
 ### Endpoint
 
@@ -110,33 +126,38 @@ Uso: quando o app de TV exibir uma propaganda na tela, ele chama este endpoint p
 GET /api/tv/registrar-exibicao
 ```
 
-### Parâmetros
+### Parametros
 
-| Parâmetro | Obrigatório | Descrição |
+| Parametro | Obrigatorio | Descricao |
 | --- | --- | --- |
 | `id` | Sim | ID da propaganda retornado em `/api/tv/propagandas` |
-| `codigo` | Sim | Código TV do Mikrotik |
+| `codigo` | Sim | Codigo TV do Mikrotik |
+| `device_id` | Sim | Identificador estavel do aparelho |
 | `api_key` | Sim | Chave da API |
 
 ### Resposta 200
 
 ```json
-{"success": true, "message": "Exibição registrada"}
+{"success": true, "message": "Exibicao registrada"}
 ```
 
-### Resposta 404
+### Resposta de bloqueio
 
 ```json
-{"success": false, "error": "Propaganda não encontrada ou código não confere"}
+{
+  "success": false,
+  "limite_tvs_atingido": true,
+  "message": "Limite de TVs atingido"
+}
 ```
 
-Observação: o `id` precisa pertencer a uma propaganda vinculada ao Mikrotik identificado pelo `codigo`.
+Observacao: o `id` precisa pertencer a uma propaganda vinculada ao Mikrotik identificado pelo `codigo`.
 
 Regra de uso no app:
-- `imagem`: envia o registro após o carregamento bem-sucedido.
-- `url` e `html`: envia o registro após o `WebView` concluir o carregamento.
-- `video`: envia o registro quando o player entra em estado pronto para reprodução.
-- O envio ocorre uma vez por exibição do item na playlist.
+- `imagem`: envia o registro apos o carregamento bem-sucedido.
+- `url` e `html`: envia o registro apos o `WebView` concluir o carregamento.
+- `video`: envia o registro quando o player entra em estado pronto para reproducao.
+- O envio ocorre uma vez por exibicao do item na playlist.
 
 ### Exemplo cURL
 
@@ -144,20 +165,20 @@ Regra de uso no app:
 curl -G "https://hotspot1.edmilsonti.com.br/api/tv/registrar-exibicao" \
   --data-urlencode "id=1" \
   --data-urlencode "codigo=TV1A2B3C4D" \
+  --data-urlencode "device_id=ANDROID-ID-DA-TV" \
   --data-urlencode "api_key=SUA_API_KEY"
 ```
 
 ## Fluxo sugerido no app de TV
 
-1. Na configuração do app, o usuário informa o código TV e, se necessário, a API key.
-2. Ao iniciar o app, e enquanto a tela de exibição estiver aberta, chamar `GET /api/tv/propagandas?codigo=XXX&api_key=YYY` em intervalo periódico para refletir mudanças em tempo real.
-3. Exibir as propagandas em rotativo, ordenando pelo campo `ordem`.
-4. Utilizar `imagem_url`, `url`, `video_url` ou `html`, conforme o tipo retornado.
-5. Aplicar `duracao`/`duration`/`tempo_exibicao_segundos` para `imagem`, `url` e `html` quando a API informar valor válido.
-6. Cada vez que uma propaganda for exibida, chamar `GET /api/tv/registrar-exibicao?id=ID&codigo=XXX&api_key=YYY` para atualizar o contador no painel.
+1. Na configuracao do app, o usuario informa o `codigo TV`.
+2. O app obtem automaticamente um `device_id` estavel do aparelho.
+3. Ao iniciar o app, e enquanto a tela de exibicao estiver aberta, chamar `GET /api/tv/propagandas`.
+4. Se a API responder com `limite_tvs_atingido=true` ou `device_id_obrigatorio=true`, o app nao deve abrir a playlist.
+5. Cada vez que uma propaganda for exibida, chamar `GET /api/tv/registrar-exibicao`.
 
-## Segurança
+## Seguranca
 
-- Não exponha a `api_key` em código público.
-- No app de TV, prefira obter a chave por configuração segura do estabelecimento.
-- Quando possível, utilize um proxy no backend para adicionar a chave às requisições.
+- Nao exponha a `api_key` em codigo publico.
+- O `device_id` deve ser enviado em todas as chamadas de TV.
+- O app deve tratar respostas de bloqueio sem usar cache para contornar a restricao.

@@ -1,28 +1,35 @@
 # Resumo de entrega do HotSpotTV
 
-## Conteúdo do pacote final
+## Conteudo do pacote final
 - `HotSpotTV-release.apk`
-- `LEIA-ME.pdf`
-- `manual-hotspottv.pdf`
-- `compatibilidade-dispositivos.pdf`
+- `manual-hotspottv-cliente.pdf`
 - `guia-instalacao.pdf`
 
+## Conteudo disponivel nesta maquina hoje
+- `app-debug.apk` para homologacao
+- documentacao atualizada com fluxo de `device_id`
+- manual do cliente em PDF
+
 ## Escopo desta entrega
-- rename completo para `HotSpotTV`
 - package final `com.hotspottv`
 - compatibilidade ampliada para Android 5.0+
-- tratamento reforçado para falhas de mídia e WebView
-- cobertura ampliada de testes unitários
-- teste instrumentado mínimo compilado
+- tratamento reforcado para falhas de midia e WebView
+- envio obrigatorio de `device_id` nas chamadas TV
+- bloqueio no app quando a API retornar `limite_tvs_atingido`
+- bloqueio no app quando a API retornar `device_id_obrigatorio`
+- cobertura ampliada de testes unitarios
 
-## Validações executadas localmente
+## Observacao sobre APK release
+- O APK `release` depende de assinatura configurada via `keystore.properties` ou variaveis `RELEASE_*`.
+- Sem essa assinatura, o build `assembleRelease` falha por protecao do projeto.
+- Ate a configuracao da assinatura, o artefato disponivel para validacao e o APK `debug`.
+
+## Validacoes executadas localmente
 - `assembleDebug`
-- `assembleRelease`
 - `testDebugUnitTest`
-- `assembleDebugAndroidTest`
+- `testDebugUnitTest assembleDebug`
 
-## Homologações pendentes em campo
-- instalação no TV Box do cliente
-- instalação no Fire TV Stick
-- instalação em Android TV homologada
-- instalação em telefone Android
+## Homologacoes pendentes em campo
+- instalacao do pacote final assinado no dispositivo do cliente
+- validacao do fluxo de limite de TVs em hardware real
+- validacao do bloqueio para aparelho nao autorizado
