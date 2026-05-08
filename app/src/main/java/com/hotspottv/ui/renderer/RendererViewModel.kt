@@ -1,9 +1,9 @@
 package com.hotspottv.ui.renderer
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import android.util.Log
 import com.hotspottv.data.model.TvRenderContent
 import com.hotspottv.data.repository.TvContentRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +30,12 @@ class RendererViewModel(
             val result = fetchContent(code, allowCacheFallback = true)
             _uiState.value = result.fold(
                 onSuccess = { RendererUiState.Success(it.content, it.fromCache) },
-                onFailure = { RendererUiState.Error(it.message ?: "Falha ao carregar conteúdo") }
+                onFailure = {
+                    RendererUiState.Error(
+                        message = it.message ?: "Falha ao carregar conteudo",
+                        cause = it
+                    )
+                }
             )
         }
     }
@@ -40,7 +45,7 @@ class RendererViewModel(
     }
 
     suspend fun refresh(): Result<TvContentRepository.FetchResult> {
-        val code = currentCode ?: return Result.failure(IllegalStateException("Código TV ausente"))
+        val code = currentCode ?: return Result.failure(IllegalStateException("Codigo TV ausente"))
         return fetchContent(code, allowCacheFallback = false)
     }
 

@@ -37,6 +37,8 @@ import coil.request.CachePolicy
 import com.hotspottv.data.model.TvCodeValidator
 import com.hotspottv.data.model.TvRenderContent
 import com.hotspottv.data.repository.TvContentRepository
+import com.hotspottv.ui.renderer.RendererErrorClassifier
+import com.hotspottv.ui.renderer.RendererErrorType
 import com.hotspottv.ui.renderer.RendererPlaylistReconciler
 import com.hotspottv.ui.renderer.RendererPlaylistRefreshResult
 import com.hotspottv.ui.renderer.RendererPlaylistSnapshot
@@ -334,7 +336,7 @@ class RendererActivity : AppCompatActivity() {
                             maybeStartContentPolling()
                         }
                         is RendererUiState.Error -> {
-                            showError(state.message)
+                            showError(resolveRendererErrorMessage(state))
                             initialContentResolved = true
                             maybeStartContentPolling()
                         }
@@ -561,6 +563,14 @@ class RendererActivity : AppCompatActivity() {
         webView.isVisible = false
         isWebContentVisible = false
         errorRetryButton.requestFocus()
+    }
+
+    private fun resolveRendererErrorMessage(state: RendererUiState.Error): String {
+        return when (RendererErrorClassifier.classify(state.cause)) {
+            RendererErrorType.DEVICE_ID_REQUIRED -> getString(R.string.error_device_id_required)
+            RendererErrorType.TV_LIMIT_REACHED -> getString(R.string.error_tv_limit_reached)
+            RendererErrorType.DEFAULT -> state.message
+        }
     }
 
     private fun showVideo(url: String, renderToken: Long) {
