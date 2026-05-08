@@ -3,20 +3,21 @@ package com.hotspottv.data.repository
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.google.gson.Gson
 import com.hotspottv.BuildConfig
 import com.hotspottv.data.api.NetworkModule
 import com.hotspottv.data.api.TvContentApiService
+import com.hotspottv.data.device.AndroidTvDeviceIdProvider
+import com.hotspottv.data.device.TvDeviceIdProvider
 import com.hotspottv.data.model.ResolvedTvContent
 import com.hotspottv.data.model.TvCodeValidator
 import com.hotspottv.data.model.TvContentParser
 import com.hotspottv.data.model.TvRenderContent
-import com.google.gson.Gson
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
 
 class TvContentRepository(
     private val apiService: TvContentApiService,
     private val context: Context,
+    private val deviceIdProvider: TvDeviceIdProvider,
     private val gson: Gson = Gson()
 ) {
     data class FetchResult(
@@ -32,7 +33,13 @@ class TvContentRepository(
         allowCacheFallback: Boolean = true
     ): Result<FetchResult> {
         val code = TvCodeValidator.normalize(rawCode)
-        val endpoint = resolveEndpoint(code)
+        val deviceId = resolveDeviceId()
+            ?: return failureOrCached(
+                code = code,
+                allowCacheFallback = allowCacheFallback,
+                error = TvApiException.DeviceIdRequired()
+            )
+        val endpoint = TvApiContract.appendDeviceId(resolveEndpoint(code), deviceId)
         val fullUrl = buildApiUrl(endpoint)
 
         return try {
@@ -41,6 +48,14 @@ class TvContentRepository(
             val response = apiService.getTvContent(fullUrl)
             if (!response.isSuccessful) {
                 val errorPayload = response.errorBody()?.string().orEmpty().trim()
+                val apiError = TvApiContract.parseApiFailure(errorPayload)
+                if (apiError != null) {
+                    return failureOrCached(
+                        code = code,
+                        allowCacheFallback = allowCacheFallback,
+                        error = apiError
+                    )
+                }
                 val details = if (errorPayload.isBlank()) "" else " - $errorPayload"
                 return failureOrCached(
                     code = code,
@@ -57,20 +72,21 @@ class TvContentRepository(
                     allowCacheFallback = allowCacheFallback,
                     error = IllegalStateException("Resposta vazia da API")
                 )
-            if (body.isApiFailure()) {
-                val apiMessage = body.apiErrorMessage()
-                    .ifBlank { "Resposta inválida da API" }
+
+            val apiFailure = TvApiContract.resolveApiFailure(body)
+            if (apiFailure != null) {
                 return failureOrCached(
                     code = code,
                     allowCacheFallback = allowCacheFallback,
-                    error = IllegalStateException(apiMessage)
+                    error = apiFailure
                 )
             }
+
             val parsed = TvContentParser.parse(body, requestedCode = code)
                 ?: return failureOrCached(
                     code = code,
                     allowCacheFallback = allowCacheFallback,
-                    error = IllegalStateException("API sem conteúdo renderizável")
+                    error = IllegalStateException("API sem conteudo renderizavel")
                 )
 
             saveCache(parsed)
@@ -87,7 +103,12 @@ class TvContentRepository(
     suspend fun registerDisplay(rawCode: String, content: TvRenderContent): Result<Unit> {
         val impressionId = content.impressionId ?: return Result.success(Unit)
         val code = TvCodeValidator.normalize(rawCode)
-        val endpoint = resolveRegisterDisplayEndpoint(code, impressionId)
+        val deviceId = resolveDeviceId()
+            ?: return Result.failure(TvApiException.DeviceIdRequired())
+        val endpoint = TvApiContract.appendDeviceId(
+            resolveRegisterDisplayEndpoint(code, impressionId),
+            deviceId
+        )
         val fullUrl = buildApiUrl(endpoint)
 
         return runCatching {
@@ -95,6 +116,7 @@ class TvContentRepository(
             val response = apiService.registerDisplay(fullUrl)
             if (!response.isSuccessful) {
                 val errorPayload = response.errorBody()?.string().orEmpty().trim()
+                TvApiContract.parseApiFailure(errorPayload)?.let { throw it }
                 val details = if (errorPayload.isBlank()) "" else " - $errorPayload"
                 throw IllegalStateException(
                     "Falha ao registrar exibicao: status ${response.code()} em $fullUrl$details"
@@ -102,10 +124,9 @@ class TvContentRepository(
             }
 
             val body = response.body()
-            if (body != null && body.isApiFailure()) {
-                val apiMessage = body.apiErrorMessage()
-                    .ifBlank { "Resposta inválida ao registrar exibição" }
-                throw IllegalStateException(apiMessage)
+            val apiFailure = TvApiContract.resolveApiFailure(body)
+            if (apiFailure != null) {
+                throw apiFailure
             }
         }
     }
@@ -157,11 +178,20 @@ class TvContentRepository(
         allowCacheFallback: Boolean,
         error: Throwable
     ): Result<FetchResult> {
+        if (!TvApiContract.shouldUseCacheFallback(error)) {
+            return Result.failure(error)
+        }
         if (!allowCacheFallback) {
             return Result.failure(error)
         }
         loadCachedResult(code)?.let { return Result.success(it) }
         return Result.failure(error)
+    }
+
+    private fun resolveDeviceId(): String? {
+        return deviceIdProvider.getDeviceId()
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
     }
 
     private fun saveCache(content: ResolvedTvContent) {
@@ -187,41 +217,6 @@ class TvContentRepository(
 
     private fun cacheKey(code: String): String = "content_$code"
 
-    private fun JsonElement.isApiFailure(): Boolean {
-        val root = asJsonObjectOrNull() ?: return false
-        val successFlag = root["success"]?.asBooleanOrNull()
-        return successFlag == false
-    }
-
-    private fun JsonElement.apiErrorMessage(): String {
-        val root = asJsonObjectOrNull() ?: return ""
-        return root.readString("error", "erro", "message", "mensagem")
-    }
-
-    private fun JsonElement.asJsonObjectOrNull(): JsonObject? {
-        return if (isJsonObject) asJsonObject else null
-    }
-
-    private fun JsonObject.readString(vararg keys: String): String {
-        for (key in keys) {
-            val raw = this[key]?.asStringOrNull()?.trim().orEmpty()
-            if (raw.isNotBlank()) {
-                return raw
-            }
-        }
-        return ""
-    }
-
-    private fun JsonElement.asStringOrNull(): String? {
-        if (isJsonNull || !isJsonPrimitive) return null
-        return runCatching { asString }.getOrNull()
-    }
-
-    private fun JsonElement.asBooleanOrNull(): Boolean? {
-        if (isJsonNull || !isJsonPrimitive) return null
-        return runCatching { asBoolean }.getOrNull()
-    }
-
     companion object {
         private const val CACHE_PREFS_NAME = "tv_content_cache"
         private const val TAG = "TvContentRepository"
@@ -230,7 +225,8 @@ class TvContentRepository(
             val apiService = NetworkModule.createTvContentApiService()
             return TvContentRepository(
                 apiService = apiService,
-                context = context.applicationContext
+                context = context.applicationContext,
+                deviceIdProvider = AndroidTvDeviceIdProvider(context.applicationContext)
             )
         }
     }
